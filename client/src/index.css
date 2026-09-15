@@ -1,0 +1,7 @@
+/* Tipografía de la dirección visual: una voz editorial para titulares y una sans humana para operación. */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+/* Sistema de diseño — orden importa: tokens → base → motion */
+@import './styles/tokens.css';
+@import './styles/base.css';
+@import './styles/motion.css';
