@@ -1,0 +1,163 @@
+/* ===================================
+   DESIGN TOKENS — Dental Matching
+   Paleta verificada con contraste WCAG 2.1 AA (color-expert-skill)
+   Pares texto/fondo documentados en DESIGN.md
+   ================================== */
+
+:root {
+  /* --- Color: primitivos (sky clínico + teal) --- */
+  --dm-primary-50: #f0f9ff;
+  --dm-primary-100: #e0f2fe;
+  --dm-primary-200: #bae6fd;
+  --dm-primary-500: #0ea5e9;
+  --dm-primary-600: #0284c7;
+  --dm-primary-700: #0369a1; /* 5.8:1 con blanco → acción primaria */
+  --dm-primary-800: #075985;
+  --dm-primary-900: #0c4a6e;
+
+  --dm-teal-50: #f0fdfa;
+  --dm-teal-100: #ccfbf1;
+  --dm-teal-500: #14b8a6;
+  --dm-teal-600: #0d9488;
+  --dm-teal-700: #0f766e; /* 5.4:1 con blanco → stop gradiente acción */
+  --dm-teal-800: #115e59;
+
+  /* --- Color: semántico --- */
+  --dm-bg: var(--dm-primary-50);
+  --dm-surface: #ffffff;
+  --dm-surface-sunken: #f8fafc;
+  --dm-border: #e2e8f0;
+  --dm-border-strong: #cbd5e1;
+
+  --dm-text: #0f172a;        /* 16.1:1 sobre blanco */
+  --dm-text-muted: #475569;  /* 7.5:1 sobre blanco (AA AAA) */
+  --dm-on-dark: #f1f5f9;
+  --dm-on-dark-muted: #bae6fd; /* 6.4:1 sobre --dm-primary-800 */
+
+  /* Acción primaria: ambos stops ≥4.5:1 con blanco (fix A11Y-04) */
+  --dm-action: linear-gradient(135deg, var(--dm-primary-700), var(--dm-teal-700));
+  --dm-action-hover: linear-gradient(135deg, var(--dm-primary-800), var(--dm-teal-800));
+  --dm-sidebar-bg: linear-gradient(180deg, var(--dm-primary-900) 0%, var(--dm-primary-800) 100%);
+
+  /* Estados (badge: fondo pastel + texto oscuro ≥4.5:1) */
+  --dm-success-bg: #d1fae5; --dm-success-text: #047857;
+  --dm-warning-bg: #fef3c7; --dm-warning-text: #92400e;
+  --dm-danger-bg: #fee2e2;  --dm-danger-text: #b91c1c;
+  --dm-info-bg: #e0f2fe;    --dm-info-text: #0369a1;
+  --dm-neutral-bg: #e2e8f0; --dm-neutral-text: #475569;
+
+  /* Sólidos para toast (texto blanco ≥4.5:1) */
+  --dm-success-solid: #047857;
+  --dm-danger-solid: #b91c1c;
+  --dm-info-solid: #0369a1;
+
+  /* Foco visible global (fix A11Y-03) */
+  --dm-ring: 0 0 0 3px rgba(3, 105, 161, 0.35);
+  --dm-ring-teal: 0 0 0 3px rgba(15, 118, 110, 0.35);
+
+  /* --- Tipografía --- */
+  --dm-font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --dm-text-xs: 0.75rem;   /* 12 */
+  --dm-text-sm: 0.8125rem; /* 13 */
+  --dm-text-md: 0.875rem;  /* 14 */
+  --dm-text-base: 1rem;    /* 16 — mínimo en inputs (fix iOS zoom, RESP-02) */
+  --dm-text-lg: 1.125rem;  /* 18 */
+  --dm-text-xl: 1.25rem;   /* 20 */
+  --dm-text-2xl: 1.5rem;   /* 24 */
+  --dm-text-3xl: 1.875rem; /* 30 */
+  --dm-text-4xl: 2.25rem;  /* 36 */
+
+  /* --- Espaciado (base 4px) --- */
+  --dm-space-1: 4px;  --dm-space-2: 8px;  --dm-space-3: 12px;
+  --dm-space-4: 16px; --dm-space-5: 20px; --dm-space-6: 24px;
+  --dm-space-8: 32px; --dm-space-10: 40px; --dm-space-12: 48px;
+  --dm-space-16: 64px;
+
+  /* --- Radio --- */
+  --dm-radius-sm: 8px;
+  --dm-radius-md: 12px;
+  --dm-radius-lg: 16px;
+  --dm-radius-xl: 20px;
+  --dm-radius-full: 999px;
+
+  /* --- Sombras (tinte sky) --- */
+  --dm-shadow-sm: 0 1px 3px rgba(12, 74, 110, 0.08);
+  --dm-shadow-md: 0 4px 14px rgba(12, 74, 110, 0.1);
+  --dm-shadow-lg: 0 12px 32px rgba(12, 74, 110, 0.16);
+
+  /* --- Motion (spec en styles/motion.css) --- */
+  --dm-dur-fast: 120ms;
+  --dm-dur-base: 200ms;
+  --dm-dur-slow: 320ms;
+  --dm-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --dm-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* --- Z-index --- */
+  --dm-z-toggle: 150;
+  --dm-z-overlay: 180;
+  --dm-z-sidebar: 200;
+  --dm-z-modal: 400;
+  --dm-z-toast: 500;
+
+  /* --- Layout --- */
+  --dm-sidebar-w: 260px;
+}
+
+/* Breakpoints del sistema (las media queries no aceptan var():
+   usar literal y mantener sincronizado con DESIGN.md)
+   --dm-bp-sm: 640px  --dm-bp-md: 768px  --dm-bp-lg: 1024px */
+
+/* Visual direction V2: editorial clinic — warmer surfaces, strong ink, coral signal. */
+:root {
+  --dm-primary-50: #eef3f6;
+  --dm-primary-100: #dfe9ef;
+  --dm-primary-200: #c6d7e2;
+  --dm-primary-500: #527da2;
+  --dm-primary-600: #345f88;
+  --dm-primary-700: #2855d9;
+  --dm-primary-800: #183d70;
+  --dm-primary-900: #102a43;
+  --dm-teal-50: #effaf6;
+  --dm-teal-100: #d8f2eb;
+  --dm-teal-500: #7cc8b7;
+  --dm-teal-600: #238f7d;
+  --dm-teal-700: #176b60;
+  --dm-teal-800: #125248;
+  --dm-bg: #f3f0e9;
+  --dm-surface: #fffdf8;
+  --dm-surface-sunken: #edf1ef;
+  --dm-border: #d7e0e7;
+  --dm-border-strong: #b8c9d4;
+  --dm-text: #102a43;
+  --dm-text-muted: #526879;
+  --dm-on-dark: #f6f8f5;
+  --dm-on-dark-muted: #c8d8e4;
+  --dm-action: #2855d9;
+  --dm-action-hover: #183d70;
+  --dm-sidebar-bg: #102a43;
+  --dm-success-bg: #d8f2eb;
+  --dm-success-text: #176b60;
+  --dm-warning-bg: #fff0d6;
+  --dm-warning-text: #8c541a;
+  --dm-danger-bg: #ffe4dd;
+  --dm-danger-text: #b64934;
+  --dm-info-bg: #dfe9ef;
+  --dm-info-text: #285878;
+  --dm-neutral-bg: #e4eaee;
+  --dm-neutral-text: #526879;
+  --dm-success-solid: #176b60;
+  --dm-danger-solid: #b64934;
+  --dm-info-solid: #285878;
+  --dm-font: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --dm-font-display: 'Space Grotesk', 'DM Sans', sans-serif;
+  --dm-ring: 0 0 0 3px rgba(40, 85, 217, .24);
+  --dm-ring-teal: 0 0 0 3px rgba(35, 143, 125, .25);
+  --dm-radius-sm: 6px;
+  --dm-radius-md: 10px;
+  --dm-radius-lg: 16px;
+  --dm-radius-xl: 24px;
+  --dm-shadow-sm: 0 1px 2px rgba(16, 42, 67, .06);
+  --dm-shadow-md: 0 10px 24px rgba(16, 42, 67, .09);
+  --dm-shadow-lg: 0 24px 56px rgba(16, 42, 67, .14);
+  --dm-sidebar-w: 272px;
+}

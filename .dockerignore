@@ -1,0 +1,12 @@
+node_modules
+client/node_modules
+client/dist
+.env
+.git
+logs
+*.log
+public_backup
+research
+data
+legacy
+.obsidian
