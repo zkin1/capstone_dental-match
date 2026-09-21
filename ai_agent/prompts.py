@@ -1,5 +1,4 @@
-# Pre-categorization schema for dental triage.
-# These 11 features match the input expected by ml_model.
+# Shared output schema for the patient-triage form.
 
 CATEGORIES = {
     "tipo_dolor": ["Sin dolor", "Provocado", "Espontaneo"],
@@ -88,7 +87,7 @@ def build_system_prompt():
     return f"""Eres un asistente clínico de triaje dental. Tu trabajo es leer las respuestas de un paciente y devolver una pre-categorización estructurada de síntomas en formato JSON.
 
 Reglas:
-1. Devuelve EXACTAMENTE estas 23 claves: {', '.join(REQUIRED_FEATURES)}.
+1. Devuelve EXACTAMENTE estas {len(REQUIRED_FEATURES)} claves: {', '.join(REQUIRED_FEATURES)}.
 2. Para `intensidad_dolor` usa un número entero del 1 al 10.
 3. Para todas las demás claves usa EXACTAMENTE uno de los valores permitidos (respetando mayúsculas, tildes y espacios).
 4. Para campos que no apliquen (por ejemplo, si no hay dolor), usa el valor "N/A" o "Ninguno" según lo indique la lista.
@@ -111,4 +110,4 @@ def build_user_prompt(answers):
 
 {text}
 
-Devuelve la pre-categorización en JSON con las 11 claves indicadas."""
+Devuelve la pre-categorización en JSON con exactamente las {len(REQUIRED_FEATURES)} claves indicadas."""

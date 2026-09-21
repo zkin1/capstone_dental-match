@@ -48,7 +48,7 @@ def _normalize_pre_categorization(raw: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def pre_categorize(answers, client=None) -> Dict[str, Any]:
-    """Pre-categorize patient answers into the 11 features expected by ml_model."""
+    """Pre-categorize patient answers into the schema defined by REQUIRED_FEATURES."""
     client = client or LLMClient()
     system_prompt = build_system_prompt()
     user_prompt = build_user_prompt(answers)
@@ -94,6 +94,9 @@ def _self_check():
 
     result = pre_categorize({"queja": "me duele al tomar frío"}, client=MockClient())
 
+    feature_count = len(REQUIRED_FEATURES)
+    assert f"estas {feature_count} claves:" in build_system_prompt()
+    assert f"exactamente las {feature_count} claves indicadas" in build_user_prompt({})
     assert set(result.keys()) == set(REQUIRED_FEATURES), f"Missing keys: {result.keys()}"
     assert result["intensidad_dolor"] == 3, f"Expected 3, got {result['intensidad_dolor']}"
     assert result["tipo_dolor"] == "Provocado"
