@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 
 require('dotenv').config();
+// Vercel detecta Express desde el entrypoint, aunque la app se configure en otro módulo.
+require('express');
 // Las fechas de cita pertenecen al dominio local chileno, no a la zona del host.
 process.env.TZ ||= 'America/Santiago';
 
