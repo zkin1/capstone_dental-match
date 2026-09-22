@@ -1,17 +1,33 @@
 const crypto = require('crypto');
 
-jest.mock('bcryptjs', () => ({ hash: jest.fn().mockResolvedValue('hashed'), compare: jest.fn() }));
-jest.mock('../../src/adapters/outbound/persistence/mysql/auth.repository', () => jest.fn().mockImplementation(() => ({
-  findByEmail: jest.fn(), findByStudentCode: jest.fn(), findById: jest.fn(), create: jest.fn(),
-  update: jest.fn(), updateRefreshToken: jest.fn(), updateLastLogin: jest.fn(), updatePassword: jest.fn(),
-})));
+jest.mock('bcryptjs', () => ({
+  hash: jest.fn().mockResolvedValue('hashed'),
+  compare: jest.fn(),
+}));
+jest.mock('../../src/adapters/outbound/persistence/postgres/auth.repository', () =>
+  jest.fn().mockImplementation(() => ({
+    findByEmail: jest.fn(),
+    findByStudentCode: jest.fn(),
+    findById: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+    updateRefreshToken: jest.fn(),
+    updateLastLogin: jest.fn(),
+    updatePassword: jest.fn(),
+  })),
+);
 
 const bcrypt = require('bcryptjs');
-const UserRepository = require('../../src/adapters/outbound/persistence/mysql/auth.repository');
+const UserRepository = require('../../src/adapters/outbound/persistence/postgres/auth.repository');
 const AuthService = require('../../src/application/auth/auth.service');
 const tokenService = require('../../src/adapters/outbound/security/jwt.adapter');
 const passwordHasher = require('../../src/adapters/outbound/security/password.adapter');
-const { ValidationError, AuthenticationError, ConflictError, NotFoundError } = require('../../src/shared/errors/AppError');
+const {
+  ValidationError,
+  AuthenticationError,
+  ConflictError,
+  NotFoundError,
+} = require('../../src/shared/errors/AppError');
 
 function serviceWithRepository() {
   const service = new AuthService(new UserRepository(), tokenService, passwordHasher);
@@ -19,8 +35,13 @@ function serviceWithRepository() {
 }
 
 const user = {
-  id: 1, email: 'admin@example.cl', password: 'hash', nombre_completo: 'Admin Demo',
-  role: 'admin', status: 'active', permissions: ['matching:execute'],
+  id: 1,
+  email: 'admin@example.cl',
+  password: 'hash',
+  nombre_completo: 'Admin Demo',
+  role: 'admin',
+  status: 'active',
+  permissions: ['matching:execute'],
 };
 
 describe('servicio de autenticación', () => {
@@ -29,10 +50,18 @@ describe('servicio de autenticación', () => {
   test('registra una cuenta válida sin devolver secretos', async () => {
     const { service, repository } = serviceWithRepository();
     repository.findByEmail.mockResolvedValue(null);
-    repository.create.mockImplementation(value => ({ id: 2, status: 'active', ...value }));
+    repository.create.mockImplementation((value) => ({
+      id: 2,
+      status: 'active',
+      ...value,
+    }));
     const result = await service.register({
-      email: 'coord@example.cl', password: 'SecurePass123!', confirmPassword: 'SecurePass123!',
-      nombre: 'Coordinador', apellido: 'Demo', role: 'coordinator',
+      email: 'coord@example.cl',
+      password: 'SecurePass123!',
+      confirmPassword: 'SecurePass123!',
+      nombre: 'Coordinador',
+      apellido: 'Demo',
+      role: 'coordinator',
     });
     expect(result.user).not.toHaveProperty('password');
     expect(result.tokens.accessToken).toEqual(expect.any(String));
@@ -43,22 +72,33 @@ describe('servicio de autenticación', () => {
     await expect(serviceWithRepository().service.register({})).rejects.toBeInstanceOf(ValidationError);
     const { service, repository } = serviceWithRepository();
     repository.findByEmail.mockResolvedValue(user);
-    await expect(service.register({
-      email: user.email, password: 'SecurePass123!', confirmPassword: 'SecurePass123!',
-      nombre: 'Admin', apellido: 'Demo', role: 'admin',
-    })).rejects.toBeInstanceOf(ConflictError);
+    await expect(
+      service.register({
+        email: user.email,
+        password: 'SecurePass123!',
+        confirmPassword: 'SecurePass123!',
+        nombre: 'Admin',
+        apellido: 'Demo',
+        role: 'admin',
+      }),
+    ).rejects.toBeInstanceOf(ConflictError);
   });
 
   test('inicia sesión solo con usuario activo y contraseña correcta', async () => {
     const { service, repository } = serviceWithRepository();
     repository.findByEmail.mockResolvedValue(user);
     bcrypt.compare.mockResolvedValue(true);
-    const result = await service.login({ email: user.email, password: 'correcta' });
+    const result = await service.login({
+      email: user.email,
+      password: 'correcta',
+    });
     expect(result.user).not.toHaveProperty('password');
     expect(repository.updateLastLogin).toHaveBeenCalledWith(1);
 
     bcrypt.compare.mockResolvedValue(false);
-    await expect(service.login({ email: user.email, password: 'incorrecta' })).rejects.toBeInstanceOf(AuthenticationError);
+    await expect(service.login({ email: user.email, password: 'incorrecta' })).rejects.toBeInstanceOf(
+      AuthenticationError,
+    );
   });
 
   test('rota el refresh token y compara únicamente su hash', async () => {
@@ -68,8 +108,13 @@ describe('servicio de autenticación', () => {
       ...user,
       refresh_token_hash: crypto.createHash('sha256').update(refreshToken).digest('hex'),
     });
-    await expect(service.refreshToken(refreshToken)).resolves.toMatchObject({ accessToken: expect.any(String) });
-    repository.findById.mockResolvedValue({ ...user, refresh_token_hash: 'otro' });
+    await expect(service.refreshToken(refreshToken)).resolves.toMatchObject({
+      accessToken: expect.any(String),
+    });
+    repository.findById.mockResolvedValue({
+      ...user,
+      refresh_token_hash: 'otro',
+    });
     await expect(service.refreshToken(refreshToken)).rejects.toBeInstanceOf(AuthenticationError);
   });
 
@@ -83,20 +128,36 @@ describe('servicio de autenticación', () => {
     const { service, repository } = serviceWithRepository();
     repository.findById.mockResolvedValue(user);
     bcrypt.compare.mockResolvedValue(false);
-    const input = { currentPassword: 'OldPass123!', newPassword: 'NewSecure123!', confirmNewPassword: 'NewSecure123!' };
+    const input = {
+      currentPassword: 'OldPass123!',
+      newPassword: 'NewSecure123!',
+      confirmNewPassword: 'NewSecure123!',
+    };
     await expect(service.changePassword(1, input)).rejects.toBeInstanceOf(AuthenticationError);
     bcrypt.compare.mockResolvedValue(true);
-    await expect(service.changePassword(1, input)).resolves.toMatchObject({ message: 'Contraseña actualizada exitosamente' });
+    await expect(service.changePassword(1, input)).resolves.toMatchObject({
+      message: 'Contraseña actualizada exitosamente',
+    });
     expect(repository.updatePassword).toHaveBeenCalledWith(1, 'hashed');
   });
 
   test('lee y actualiza el perfil sin permitir campos arbitrarios', async () => {
     const { service, repository } = serviceWithRepository();
     repository.findById.mockResolvedValue(user);
-    repository.update.mockResolvedValue({ ...user, nombre_completo: 'Nombre Nuevo' });
+    repository.update.mockResolvedValue({
+      ...user,
+      nombre_completo: 'Nombre Nuevo',
+    });
     await expect(service.getProfile(1)).resolves.not.toHaveProperty('password');
-    await service.updateProfile(1, { nombre_completo: 'Nombre Nuevo', telefono: '999', role: 'admin' });
-    expect(repository.update).toHaveBeenCalledWith(1, { nombre_completo: 'Nombre Nuevo', telefono: '999' });
+    await service.updateProfile(1, {
+      nombre_completo: 'Nombre Nuevo',
+      telefono: '999',
+      role: 'admin',
+    });
+    expect(repository.update).toHaveBeenCalledWith(1, {
+      nombre_completo: 'Nombre Nuevo',
+      telefono: '999',
+    });
     repository.findById.mockResolvedValue(null);
     await expect(service.getProfile(99)).rejects.toBeInstanceOf(NotFoundError);
     await expect(service.updateProfile(99, {})).rejects.toBeInstanceOf(NotFoundError);

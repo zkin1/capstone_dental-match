@@ -16,11 +16,11 @@ async function main() {
 
   await database.initialize();
   const db = await database.getConnection();
-  const [existing] = await db.execute('SELECT id FROM users WHERE email = ? LIMIT 1', [email]);
-  if (existing.length) throw new Error('Ya existe una cuenta con ADMIN_EMAIL');
-  await db.execute(
+  const existing = await db.query('SELECT id FROM users WHERE email = $1 LIMIT 1', [email]);
+  if (existing.rows.length) throw new Error('Ya existe una cuenta con ADMIN_EMAIL');
+  await db.query(
     `INSERT INTO users (email, password, nombre_completo, role, permissions, status)
-     VALUES (?, ?, ?, 'admin', ?, 'active')`,
+     VALUES ($1, $2, $3, 'admin', $4, 'active')`,
     [
       email,
       await bcrypt.hash(password, 12),
@@ -32,7 +32,7 @@ async function main() {
 }
 
 main()
-  .catch(error => {
+  .catch((error) => {
     console.error(error.message);
     process.exitCode = 1;
   })

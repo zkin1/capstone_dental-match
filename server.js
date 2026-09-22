@@ -12,10 +12,27 @@ const host = process.env.HOST || '0.0.0.0';
 
 function validateProductionConfig() {
   if (process.env.NODE_ENV !== 'production') return;
-  for (const key of ['JWT_SECRET', 'JWT_REFRESH_SECRET', 'DB_PASSWORD']) {
-    if (!process.env[key] || process.env[key].length < 24 || /change|cambia|cambiar|replace|example|temporary|secret/i.test(process.env[key])) {
+  for (const key of ['JWT_SECRET', 'JWT_REFRESH_SECRET']) {
+    if (
+      !process.env[key] ||
+      process.env[key].length < 24 ||
+      /change|cambia|cambiar|replace|example|temporary|secret/i.test(process.env[key])
+    ) {
       throw new Error(`${key} debe ser un secreto seguro en producción`);
     }
+  }
+  if (!process.env.DATABASE_URL && !process.env.DB_PASSWORD) {
+    throw new Error('Define DATABASE_URL o DB_PASSWORD para PostgreSQL en producción');
+  }
+  if (
+    !process.env.DATABASE_URL &&
+    (process.env.DB_PASSWORD.length < 16 ||
+      /change|cambia|cambiar|replace|example|temporary|password/i.test(process.env.DB_PASSWORD))
+  ) {
+    throw new Error('DB_PASSWORD debe ser un secreto seguro en producción');
+  }
+  if (process.env.DATABASE_URL && !/^postgres(?:ql)?:\/\//i.test(process.env.DATABASE_URL)) {
+    throw new Error('DATABASE_URL debe usar el protocolo PostgreSQL');
   }
 }
 
@@ -28,7 +45,7 @@ async function start() {
   });
   server.timeout = Number(process.env.SERVER_TIMEOUT) || 30000;
 
-  const shutdown = async signal => {
+  const shutdown = async (signal) => {
     console.log(`${signal}: cerrando servidor`);
     server.close(async () => {
       await database.closePool();
@@ -41,7 +58,7 @@ async function start() {
 }
 
 if (require.main === module) {
-  start().catch(error => {
+  start().catch((error) => {
     console.error('No se pudo iniciar el servidor:', error.message);
     process.exit(1);
   });

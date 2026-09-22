@@ -1,10 +1,10 @@
 const AuthService = require('../../../../application/auth/auth.service');
-const UserRepository = require('../../../../adapters/outbound/persistence/mysql/auth.repository');
+const UserRepository = require('../../../../adapters/outbound/persistence/postgres/auth.repository');
 const tokenService = require('../../../../adapters/outbound/security/jwt.adapter');
 const passwordHasher = require('../../../../adapters/outbound/security/password.adapter');
 const { asyncHandler } = require('../middleware/errorHandler');
 
-const cookieOptions = maxAge => ({
+const cookieOptions = (maxAge) => ({
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
   sameSite: 'strict',
@@ -47,11 +47,17 @@ class AuthController {
   });
 
   getProfile = asyncHandler(async (req, res) => {
-    res.json({ success: true, data: await this.authService.getProfile(req.user.id) });
+    res.json({
+      success: true,
+      data: await this.authService.getProfile(req.user.id),
+    });
   });
 
   updateProfile = asyncHandler(async (req, res) => {
-    res.json({ success: true, data: await this.authService.updateProfile(req.user.id, req.body) });
+    res.json({
+      success: true,
+      data: await this.authService.updateProfile(req.user.id, req.body),
+    });
   });
 
   changePassword = asyncHandler(async (req, res) => {

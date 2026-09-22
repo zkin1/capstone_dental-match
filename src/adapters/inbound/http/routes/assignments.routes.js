@@ -1,6 +1,6 @@
 const express = require('express');
 const database = require('../../../../infrastructure/database/connection');
-const AssignmentRepository = require('../../../outbound/persistence/mysql/assignment.repository');
+const AssignmentRepository = require('../../../outbound/persistence/postgres/assignment.repository');
 const AssignmentService = require('../../../../application/assignments/assignment.service');
 const { authenticateToken, requireRole } = require('../middleware/auth');
 

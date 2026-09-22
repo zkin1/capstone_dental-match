@@ -18,6 +18,8 @@
     "format": "prettier --write \"server.js\" \"src/**/*.js\" \"scripts/**/*.js\"",
     "migrate": "node scripts/migrate.js migrate",
     "migrate:status": "node scripts/migrate.js status",
+    "db:inventory:mysql": "node scripts/migrate-mysql-to-postgres.js inventory",
+    "db:migrate:mysql": "node scripts/migrate-mysql-to-postgres.js migrate",
     "db:create-admin": "node scripts/create-admin.js",
     "build": "npm run lint && npm run test",
     "validate": "npm run lint && npm run test:coverage",
@@ -44,12 +46,13 @@
     "helmet": "^8.1.0",
     "joi": "^18.0.1",
     "jsonwebtoken": "^9.0.2",
-    "mysql2": "^3.14.3"
+    "pg": "^8.23.0"
   },
   "devDependencies": {
     "concurrently": "^9.2.1",
     "eslint": "^8.57.0",
     "jest": "^29.7.0",
+    "mysql2": "^3.24.4",
     "nodemon": "^3.1.10",
     "prettier": "^3.2.4",
     "supertest": "^6.3.4"

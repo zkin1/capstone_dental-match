@@ -1,6 +1,6 @@
 const express = require('express');
 const database = require('../../../../infrastructure/database/connection');
-const MatchingRepository = require('../../../outbound/persistence/mysql/matching.repository');
+const MatchingRepository = require('../../../outbound/persistence/postgres/matching.repository');
 const { createMatchingService } = require('../../../../application/matching/matching.service');
 const { authenticateToken, requireRole } = require('../middleware/auth');
 

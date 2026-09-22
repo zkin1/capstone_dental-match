@@ -1,6 +1,6 @@
 const express = require('express');
 const database = require('../../../../infrastructure/database/connection');
-const DashboardRepository = require('../../../../adapters/outbound/persistence/mysql/dashboard.repository');
+const DashboardRepository = require('../../../../adapters/outbound/persistence/postgres/dashboard.repository');
 const DashboardService = require('../../../../application/dashboard/dashboard.service');
 const { authenticateToken, requireRole } = require('../middleware/auth');
 
