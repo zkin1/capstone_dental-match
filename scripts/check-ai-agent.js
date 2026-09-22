@@ -48,7 +48,10 @@ async function main() {
 
   const response = await request('/pre-categorize', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Agent-Token': process.env.AI_AGENT_TOKEN || '',
+    },
     body: JSON.stringify({ answers: sampleAnswers }),
   });
   const result = await readJson(response);
@@ -61,7 +64,7 @@ async function main() {
   }
 
   console.log('✅ Agente activo y pre-categorizando correctamente.');
-  console.log(`   LLM configurado: ${health.llm || 'no informado'}`);
+  console.log(`   LLM configurado: ${health.provider || 'no informado'} / ${health.model || 'sin modelo'}`);
   console.log(`   Resultado: ${JSON.stringify(preCategorization)}`);
 }
 

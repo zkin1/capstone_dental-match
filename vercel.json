@@ -1,0 +1,6 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "express",
+  "regions": ["gru1"],
+  "buildCommand": "npm test -- --runInBand"
+}

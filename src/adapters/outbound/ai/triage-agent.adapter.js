@@ -7,7 +7,10 @@ async function preCategorizar(respuestas) {
   try {
     const res = await fetch(`${AI_AGENT_URL}/pre-categorize`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Agent-Token': process.env.AI_AGENT_TOKEN || '',
+      },
       body: JSON.stringify({ answers: respuestas }),
       signal: controller.signal,
     });

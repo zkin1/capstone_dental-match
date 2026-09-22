@@ -2,8 +2,8 @@ import json
 import re
 from typing import Dict, Any
 
-from ai_agent.llm_client import LLMClient
-from ai_agent.prompts import build_system_prompt, build_user_prompt, REQUIRED_FEATURES
+from llm_client import LLMClient
+from prompts import build_system_prompt, build_user_prompt, REQUIRED_FEATURES
 
 
 def _extract_json(text: str) -> Dict[str, Any]:
