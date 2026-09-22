@@ -90,7 +90,8 @@ async function performHealthCheck() {
       engine: 'postgresql',
       responseTime: Date.now() - startedAt,
     };
-  } catch {
+  } catch (error) {
+    console.error('Health check PostgreSQL fallido:', error.code || 'UNKNOWN', error.message);
     return {
       status: 'unhealthy',
       engine: 'postgresql',
