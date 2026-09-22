@@ -11,8 +11,13 @@ function databaseSchema() {
 }
 
 function config() {
+  // ponytail: matching masivo reserva una sesión para el lock; cambiar a lock transaccional antes de usar un pool de 1.
+  const connectionLimit = Number(process.env.DB_CONNECTION_LIMIT) || 2;
+  if (!Number.isInteger(connectionLimit) || connectionLimit < 2) {
+    throw new Error('DB_CONNECTION_LIMIT debe ser un entero >= 2');
+  }
   const common = {
-    max: Number(process.env.DB_CONNECTION_LIMIT) || 10,
+    max: connectionLimit,
     idleTimeoutMillis: Number(process.env.DB_IDLE_TIMEOUT_MS) || 30000,
     connectionTimeoutMillis: Number(process.env.DB_CONNECT_TIMEOUT_MS) || 10000,
     application_name: 'dental-match',
