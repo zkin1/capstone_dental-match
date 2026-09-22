@@ -2,12 +2,16 @@ const { preCategorizar } = require('../../src/adapters/outbound/ai/triage-agent.
 
 describe('AIAgentService', () => {
   const originalFetch = global.fetch;
+  const originalToken = process.env.AI_AGENT_TOKEN;
 
   afterEach(() => {
     global.fetch = originalFetch;
+    if (originalToken === undefined) delete process.env.AI_AGENT_TOKEN;
+    else process.env.AI_AGENT_TOKEN = originalToken;
   });
 
   test('returns the pre-categorization from the agent', async () => {
+    process.env.AI_AGENT_TOKEN = 'token-de-prueba';
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
       json: async () => ({ pre_categorization: { intensidad_dolor: 7, treatment: 'Endodoncia' } })
@@ -19,7 +23,10 @@ describe('AIAgentService', () => {
     });
     expect(global.fetch).toHaveBeenCalledWith(
       expect.stringContaining('/pre-categorize'),
-      expect.objectContaining({ method: 'POST' })
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({ 'X-Agent-Token': 'token-de-prueba' }),
+      })
     );
   });
 

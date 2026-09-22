@@ -1,21 +1,22 @@
 import os
 import sys
+import hmac
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(REPO_ROOT))
+AGENT_DIR = Path(__file__).resolve().parent
+sys.path.insert(0, str(AGENT_DIR))
 
-# ponytail: server.py se puede correr desde ai_agent/; cargar root .env aquí
 from dotenv import load_dotenv
-load_dotenv(REPO_ROOT / ".env")
+load_dotenv(AGENT_DIR.parent / ".env")
+load_dotenv(AGENT_DIR / ".env")
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Header, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import Dict, Any
 
-from ai_agent.agent import pre_categorize
-from ai_agent.llm_client import LLMClient
+from agent import pre_categorize
+from llm_client import LLMClient
 
 app = FastAPI(title="AI Triage Agent", version="0.1.0")
 client = LLMClient()
@@ -27,16 +28,21 @@ class PreCategorizeRequest(BaseModel):
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "llm": client.health()}
+    return {"status": "ok", "provider": client.provider, "model": client.model}
 
 
 @app.post("/pre-categorize")
-def pre_categorize_endpoint(request: PreCategorizeRequest):
+def pre_categorize_endpoint(request: PreCategorizeRequest, x_agent_token: str | None = Header(default=None)):
+    token = os.getenv("AI_AGENT_TOKEN")
+    if not token:
+        raise HTTPException(status_code=503, detail="AI_AGENT_TOKEN no configurado")
+    if not hmac.compare_digest(x_agent_token or "", token):
+        raise HTTPException(status_code=401, detail="No autorizado")
     try:
         result = pre_categorize(request.answers, client=client)
         return {"pre_categorization": result}
-    except Exception as e:
-        return JSONResponse(status_code=500, content={"error": str(e)})
+    except Exception:
+        return JSONResponse(status_code=502, content={"error": "Pre-categorización no disponible"})
 
 
 if __name__ == "__main__":

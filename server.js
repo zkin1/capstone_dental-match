@@ -34,6 +34,9 @@ function validateProductionConfig() {
   if (process.env.DATABASE_URL && !/^postgres(?:ql)?:\/\//i.test(process.env.DATABASE_URL)) {
     throw new Error('DATABASE_URL debe usar el protocolo PostgreSQL');
   }
+  if (process.env.AI_AGENT_URL && (!process.env.AI_AGENT_TOKEN || process.env.AI_AGENT_TOKEN.length < 24)) {
+    throw new Error('AI_AGENT_TOKEN debe tener al menos 24 caracteres cuando se configura AI_AGENT_URL');
+  }
 }
 
 async function start() {
@@ -64,4 +67,7 @@ if (require.main === module) {
   });
 }
 
-module.exports = { start };
+// Vercel importa la aplicación; el arranque local sigue usando start().
+validateProductionConfig();
+module.exports = app;
+module.exports.start = start;
