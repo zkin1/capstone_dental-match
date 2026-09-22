@@ -1,8 +1,8 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const database = require('../../../../infrastructure/database/connection');
-const PatientRepository = require('../../../outbound/persistence/mysql/patient.repository');
-const MatchingRepository = require('../../../outbound/persistence/mysql/matching.repository');
+const PatientRepository = require('../../../outbound/persistence/postgres/patient.repository');
+const MatchingRepository = require('../../../outbound/persistence/postgres/matching.repository');
 const PatientService = require('../../../../application/patients/patient.service');
 const { preCategorizar } = require('../../../outbound/ai/triage-agent.adapter');
 const { createMatchingService } = require('../../../../application/matching/matching.service');
@@ -62,7 +62,10 @@ router.put('/:id', ...staffOnly, async (req, res, next) => {
 router.delete('/:id', ...staffOnly, async (req, res, next) => {
   try {
     await service.deactivate(req.params.id);
-    return res.json({ success: true, message: 'Paciente desactivado y asignaciones canceladas' });
+    return res.json({
+      success: true,
+      message: 'Paciente desactivado y asignaciones canceladas',
+    });
   } catch (error) {
     return next(error);
   }

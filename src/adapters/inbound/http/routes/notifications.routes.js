@@ -1,6 +1,6 @@
 const express = require('express');
 const database = require('../../../../infrastructure/database/connection');
-const NotificationsRepository = require('../../../../adapters/outbound/persistence/mysql/notifications.repository');
+const NotificationsRepository = require('../../../../adapters/outbound/persistence/postgres/notifications.repository');
 const NotificationsService = require('../../../../application/notifications/notifications.service');
 const { authenticateToken, requireRole } = require('../middleware/auth');
 

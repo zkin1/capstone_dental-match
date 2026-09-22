@@ -4,9 +4,15 @@ jest.mock('../../src/infrastructure/database/connection', () => ({
   transaction: jest.fn(),
 }));
 
-const { createMatchingService, WEIGHTS, calculateScore, scorePatientCategory, nextDateFor } = require('../../src/application/matching/matching.service');
+const {
+  createMatchingService,
+  WEIGHTS,
+  calculateScore,
+  scorePatientCategory,
+  nextDateFor,
+} = require('../../src/application/matching/matching.service');
 const database = require('../../src/infrastructure/database/connection');
-const MatchingRepository = require('../../src/adapters/outbound/persistence/mysql/matching.repository');
+const MatchingRepository = require('../../src/adapters/outbound/persistence/postgres/matching.repository');
 const matching = createMatchingService(new MatchingRepository(database));
 
 const candidate = {
@@ -44,9 +50,17 @@ describe('matching determinista ponderado', () => {
     const result = scorePatientCategory({
       edad: 30,
       prioridad: 'Moderada',
-      pre_categorizacion_ia: { signos_infeccion: 'Absceso/Hinchazon con fiebre', intensidad_dolor: 9 },
+      pre_categorizacion_ia: {
+        signos_infeccion: 'Absceso/Hinchazon con fiebre',
+        intensidad_dolor: 9,
+      },
     });
-    expect(result).toMatchObject({ specialty: 'Endodoncia', priority: 'Muy Alta', pain: 9, redFlag: true });
+    expect(result).toMatchObject({
+      specialty: 'Endodoncia',
+      priority: 'Muy Alta',
+      pain: 9,
+      redFlag: true,
+    });
   });
 
   test('los menores se derivan a odontopediatría sin intervención del LLM', () => {
@@ -63,11 +77,20 @@ describe('matching determinista ponderado', () => {
   });
 
   test('calcula compatibilidad horaria desde preferencias explícitas', () => {
-    const morningPatient = { dias_disponibles: ['lunes'], horario_preferencia: 'mañana' };
+    const morningPatient = {
+      dias_disponibles: ['lunes'],
+      horario_preferencia: 'mañana',
+    };
     expect(calculateScore(morningPatient, candidate, category).factors.horario).toBe(1);
-    expect(calculateScore({ ...morningPatient, dias_disponibles: ['martes'] }, candidate, category).factors.horario).toBe(0);
-    expect(calculateScore({ ...morningPatient, horario_preferencia: 'tarde' }, candidate, category).factors.horario).toBe(0.35);
-    expect(calculateScore({ ...morningPatient, horario_preferencia: 'flexible' }, candidate, category).factors.horario).toBe(1);
+    expect(
+      calculateScore({ ...morningPatient, dias_disponibles: ['martes'] }, candidate, category).factors.horario,
+    ).toBe(0);
+    expect(
+      calculateScore({ ...morningPatient, horario_preferencia: 'tarde' }, candidate, category).factors.horario,
+    ).toBe(0.35);
+    expect(
+      calculateScore({ ...morningPatient, horario_preferencia: 'flexible' }, candidate, category).factors.horario,
+    ).toBe(1);
   });
 
   test('calcula una próxima fecha válida y rechaza días desconocidos', () => {
@@ -101,61 +124,80 @@ describe('transacción de matching', () => {
   let connection;
 
   beforeEach(() => {
-    connection = { execute: jest.fn(), query: jest.fn(), release: jest.fn() };
+    connection = { query: jest.fn(), release: jest.fn() };
     database.transaction.mockReset();
     database.getConnection.mockReset();
     database.getPoolConnection.mockReset();
-    database.transaction.mockImplementation(work => work(connection));
+    database.transaction.mockImplementation((work) => work(connection));
   });
 
   test('no crea nada si el paciente ya no está disponible', async () => {
-    connection.execute.mockResolvedValueOnce([[]]);
-    await expect(matching.matchPatient(10)).resolves.toEqual({ success: false, reason: 'Paciente no disponible para asignación' });
-    expect(connection.execute).toHaveBeenCalledTimes(1);
+    connection.query.mockResolvedValueOnce({ rows: [] });
+    await expect(matching.matchPatient(10)).resolves.toEqual({
+      success: false,
+      reason: 'Paciente no disponible para asignación',
+    });
+    expect(connection.query).toHaveBeenCalledTimes(1);
   });
 
   test('mantiene pendiente un caso sin candidatos', async () => {
-    connection.execute
-      .mockResolvedValueOnce([[patient]])
-      .mockResolvedValueOnce([{ affectedRows: 1 }])
-      .mockResolvedValueOnce([[]]);
-    await expect(matching.matchPatient(10)).resolves.toMatchObject({ success: false, category: { specialty: 'Endodoncia' } });
+    connection.query
+      .mockResolvedValueOnce({ rows: [patient] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [] })
+      .mockResolvedValueOnce({ rows: [] });
+    await expect(matching.matchPatient(10)).resolves.toMatchObject({
+      success: false,
+      category: { specialty: 'Endodoncia' },
+    });
   });
 
   test('crea asignación, actualiza carga y encola avisos en una transacción', async () => {
-    connection.execute
-      .mockResolvedValueOnce([[patient]])
-      .mockResolvedValueOnce([{ affectedRows: 1 }])
-      .mockResolvedValueOnce([[available]])
-      .mockResolvedValueOnce([[{ total: 0 }]])
-      .mockResolvedValueOnce([{ insertId: 99 }])
-      .mockResolvedValueOnce([{ affectedRows: 1 }])
-      .mockResolvedValueOnce([{ affectedRows: 1 }])
-      .mockResolvedValueOnce([{ affectedRows: 1 }])
-      .mockResolvedValueOnce([{ affectedRows: 1 }]);
+    connection.query
+      .mockResolvedValueOnce({ rows: [patient] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [] })
+      .mockResolvedValueOnce({ rows: [available] })
+      .mockResolvedValueOnce({ rows: [{ total: 0 }] })
+      .mockResolvedValueOnce({ rows: [{ id: 99 }], rowCount: 1 })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [] });
 
     const result = await matching.matchPatient(10);
-    expect(result).toMatchObject({ success: true, assignmentId: 99, estudiante: 'Estudiante Demo', especialidad: 'Endodoncia' });
-    expect(connection.execute).toHaveBeenCalledTimes(9);
-    expect(connection.execute.mock.calls[4][0]).toContain('INSERT INTO asignaciones');
-    expect(connection.execute.mock.calls[7][0]).toContain('INSERT INTO notificaciones_email');
+    expect(result).toMatchObject({
+      success: true,
+      assignmentId: 99,
+      estudiante: 'Estudiante Demo',
+      especialidad: 'Endodoncia',
+    });
+    expect(connection.query).toHaveBeenCalledTimes(9);
+    expect(connection.query.mock.calls[4][0]).toContain('INSERT INTO asignaciones');
+    expect(connection.query.mock.calls[7][0]).toContain('INSERT INTO notificaciones_email');
   });
 
   test('aborta si la capacidad cambia antes de incrementar la carga', async () => {
-    connection.execute
-      .mockResolvedValueOnce([[patient]])
-      .mockResolvedValueOnce([{ affectedRows: 1 }])
-      .mockResolvedValueOnce([[available]])
-      .mockResolvedValueOnce([[{ total: 0 }]])
-      .mockResolvedValueOnce([{ insertId: 99 }])
-      .mockResolvedValueOnce([{ affectedRows: 1 }])
-      .mockResolvedValueOnce([{ affectedRows: 0 }]);
+    connection.query
+      .mockResolvedValueOnce({ rows: [patient] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [] })
+      .mockResolvedValueOnce({ rows: [available] })
+      .mockResolvedValueOnce({ rows: [{ total: 0 }] })
+      .mockResolvedValueOnce({ rows: [{ id: 99 }], rowCount: 1 })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 0, rows: [] });
     await expect(matching.matchPatient(10)).rejects.toThrow('La capacidad del estudiante cambió');
   });
 
   test('serializa ejecuciones masivas con un lock de base de datos', async () => {
-    const lock = { query: jest.fn().mockResolvedValueOnce([[{ acquired: 1 }]]).mockResolvedValueOnce([[{ released: 1 }]]), release: jest.fn() };
-    const pool = { execute: jest.fn().mockResolvedValue([[{ id: 10 }, { id: 11 }]]) };
+    const lock = {
+      query: jest
+        .fn()
+        .mockResolvedValueOnce({ rows: [{ acquired: true }] })
+        .mockResolvedValueOnce({ rows: [{ released: true }] }),
+      release: jest.fn(),
+    };
+    const pool = {
+      query: jest.fn().mockResolvedValue({ rows: [{ id: 10 }, { id: 11 }] }),
+    };
     database.getPoolConnection.mockResolvedValue(lock);
     database.getConnection.mockResolvedValue(pool);
     database.transaction
@@ -163,13 +205,23 @@ describe('transacción de matching', () => {
       .mockResolvedValueOnce({ success: false, reason: 'sin candidato' });
 
     await expect(matching.executeAdvancedMatching()).resolves.toMatchObject({
-      success: true, processed: 2, matched: 1, unmatched: 1, averageScore: 0.8,
+      success: true,
+      processed: 2,
+      matched: 1,
+      unmatched: 1,
+      averageScore: 0.8,
     });
     expect(lock.release).toHaveBeenCalled();
   });
 
   test('no ejecuta el lote cuando otro proceso mantiene el lock', async () => {
-    const lock = { query: jest.fn().mockResolvedValueOnce([[{ acquired: 0 }]]), release: jest.fn() };
+    const lock = {
+      query: jest
+        .fn()
+        .mockResolvedValueOnce({ rows: [{ acquired: false }] })
+        .mockResolvedValueOnce({ rows: [{ released: false }] }),
+      release: jest.fn(),
+    };
     database.getPoolConnection.mockResolvedValue(lock);
 
     await expect(matching.executeAdvancedMatching()).resolves.toEqual({
@@ -181,7 +233,14 @@ describe('transacción de matching', () => {
   });
 
   test('devuelve métricas del algoritmo desde la base', async () => {
-    database.getConnection.mockResolvedValue({ execute: jest.fn().mockResolvedValue([[{ total: 2, activas: 1, completadas: 1, score_promedio: 0.75 }]]) });
-    await expect(matching.getStats()).resolves.toMatchObject({ total: 2, score_promedio: 0.75 });
+    database.getConnection.mockResolvedValue({
+      query: jest.fn().mockResolvedValue({
+        rows: [{ total: 2, activas: 1, completadas: 1, score_promedio: 0.75 }],
+      }),
+    });
+    await expect(matching.getStats()).resolves.toMatchObject({
+      total: 2,
+      score_promedio: 0.75,
+    });
   });
 });

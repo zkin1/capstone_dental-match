@@ -19,7 +19,7 @@ La demo cubre:
 - transiciones de estado de las asignaciones;
 - dashboard de operación;
 - cola de notificaciones tipo outbox;
-- migraciones MySQL reproducibles;
+- migraciones PostgreSQL reproducibles;
 - frontend React/Vite con el mismo sistema visual en todas las pantallas.
 
 No es un sistema de diagnóstico médico. La categoría sirve para triaje operativo y asignación; la valoración clínica definitiva corresponde al equipo odontológico.
@@ -42,11 +42,11 @@ Express BFF / monolito modular
    ├── Dashboard
    └── Notificaciones
    │
-   ├── MySQL privado: datos, transacciones, migraciones y outbox
+   ├── PostgreSQL privado: datos, transacciones, migraciones y outbox
    └── AI Agent opcional: solo pre-categorización
 ```
 
-El navegador nunca se conecta directamente a MySQL ni conoce credenciales de base de datos. El BFF es el único punto de entrada HTTP y el monolito modular concentra la lógica transaccional.
+El navegador nunca se conecta directamente a PostgreSQL ni conoce credenciales de base de datos. El BFF es el único punto de entrada HTTP y el monolito modular concentra la lógica transaccional.
 
 ### Estructura principal
 
@@ -55,8 +55,8 @@ server.js                              arranque, entorno y ciclo de vida
 src/domain                             reglas puras del negocio, sin I/O
 src/application                       casos de uso y orquestación por módulo
 src/adapters/inbound/http              rutas, controladores y middleware HTTP
-src/adapters/outbound                  MySQL, agente IA y servicios externos
-src/infrastructure                     conexión MySQL, migraciones y composición HTTP
+src/adapters/outbound                  PostgreSQL, agente IA y servicios externos
+src/infrastructure                     conexión PostgreSQL, migraciones y composición HTTP
 client/src                             SPA React, componentes y páginas
 ai_agent                               servicio Python opcional de pre-categorización
 tests                                  pruebas unitarias e integración HTTP
@@ -78,7 +78,7 @@ Las antiguas capas duplicadas y el frontend estático anterior ya no forman part
 - Se centralizaron estados, roles, especialidades, prioridades y normalizadores en `src/domain/common.js`.
 - Se movió el cálculo puro del matching a `src/domain/matching/scoring.js`, separado de la persistencia y la API.
 - Se separaron las entradas HTTP, los casos de uso, los adaptadores de salida y la infraestructura para hacer explícito el flujo hexagonal.
-- Se extrajeron pacientes, estudiantes y asignaciones a validaciones de dominio, servicios de aplicación y repositorios MySQL; sus rutas ahora solo traducen HTTP.
+- Se extrajeron pacientes, estudiantes y asignaciones a validaciones de dominio, servicios de aplicación y repositorios PostgreSQL; sus rutas ahora solo traducen HTTP.
 - Se convirtió el matching en un algoritmo determinista, auditable y transaccional.
 - Se añadieron bloqueos de filas y control de asignación activa única por paciente.
 - Se separaron las migraciones nuevas de los cambios de endurecimiento del esquema legacy.
@@ -86,7 +86,7 @@ Las antiguas capas duplicadas y el frontend estático anterior ya no forman part
 - Se añadieron límites de rate, tamaño de body, helmet, compresión, request id y validaciones de entrada.
 - Se alineó el frontend con contratos del BFF, estados de carga/error/vacío y componentes accesibles.
 - Se limpió el `package.json` de dependencias directas que ya no se utilizaban y se dejó `npm audit --omit=dev` sin vulnerabilidades.
-- Se dejó Docker con MySQL privado, secretos obligatorios, healthchecks y red interna para la comunicación con el agente IA.
+- Se dejó Docker con PostgreSQL privado, secretos obligatorios, healthchecks y red interna para la comunicación con el agente IA.
 
 ## 4. Regla central: IA fuera del matching
 
@@ -169,7 +169,7 @@ La falta de candidato compatible no es un error técnico ni una asignación inve
 
 ### Desempate y auditoría
 
-Los candidatos se ordenan por score descendente y se aplica un desempate estable para que el resultado no dependa del orden accidental de MySQL. Cada asignación guarda el score y los factores que lo produjeron.
+Los candidatos se ordenan por score descendente y se aplica un desempate estable para que el resultado no dependa del orden accidental de PostgreSQL. Cada asignación guarda el score y los factores que lo produjeron.
 
 El resultado se puede explicar como: “este estudiante fue elegido por coincidencia horaria, especialidad, capacidad, prioridad, dolor y experiencia”, mostrando los valores persistidos.
 
@@ -252,20 +252,16 @@ El esquema canónico se crea desde `src/infrastructure/database/migrations/`.
 
 - claves foráneas entre pacientes, estudiantes, usuarios y asignaciones;
 - email normalizado y con longitud compatible con las claves existentes;
-- índice único para `active_patient_id` en asignaciones activas;
+- índice único parcial sobre `id_paciente` para impedir dos asignaciones activas;
 - índices para estado, categoría, prioridad, disponibilidad y fechas de operación;
 - constraints y validación de aplicación para estados y capacidades;
 - datos de auditoría de score, factores, fechas y cambios de estado.
 
 ### Migraciones aplicadas
 
-1. `20260907000001_modular_monolith_schema.js`: esquema canónico, tablas, índices y compatibilidad base.
-2. `20260907000002_harden_legacy_foreign_keys.js`: endurecimiento de claves foráneas legacy.
-3. `20260907000003_align_legacy_field_lengths.js`: alineación de longitudes de campos con las relaciones existentes.
+1. `20260922000001_postgresql_baseline.js`: esquema PostgreSQL canónico, relaciones, checks e índices.
 
-Las migraciones validan conflictos antes de crear índices. Si hay duplicados incompatibles, se detienen y obligan a resolver el dato explícitamente.
-
-La base real utilizada durante la validación quedó con 8 migraciones ejecutadas y 0 pendientes. El estado debe verificarse siempre con `npm run migrate:status` en cada entorno.
+La copia desde la base anterior se detiene si el destino ya contiene datos o si el origen no coincide con el esquema esperado. El estado debe verificarse siempre con `npm run migrate:status` en cada entorno.
 
 ## 11. Flujos completos
 
@@ -399,7 +395,7 @@ La fuente de tokens está en `client/src/styles/tokens.css`; el espejo para comp
 
 ## 14. Seguridad
 
-- MySQL queda en red privada y no se publica al host en Docker.
+- PostgreSQL queda en red privada y no se publica al host en Docker.
 - El navegador no recibe tokens en JSON ni credenciales de DB.
 - Las cookies son HttpOnly y usan configuración segura según el entorno.
 - Los refresh tokens se almacenan como hash.
@@ -419,7 +415,7 @@ Esto no reemplaza una revisión de seguridad de producción: todavía deben comp
 Requisitos:
 
 - Node.js 20 o superior;
-- MySQL 8 o superior;
+- PostgreSQL 17 o superior;
 - Python 3.11 o superior solo si se ejecuta el agente IA.
 
 Instalación:
@@ -449,6 +445,15 @@ npm run migrate
 npm run dev
 ```
 
+Para una migración única desde la base MySQL anterior, configurar `MYSQL_SOURCE_*`, revisar primero el inventario y luego copiar:
+
+```powershell
+npm run db:inventory:mysql
+npm run db:migrate:mysql
+```
+
+El esquema anterior, el esquema final y las reglas de conservación están documentados en `docs/DATABASE_MIGRATION.md`.
+
 Frontend y backend en paralelo:
 
 ```powershell
@@ -465,8 +470,9 @@ Variables relevantes:
 
 ```text
 NODE_ENV, HOST, PORT, TZ
-DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD, DB_ROOT_PASSWORD
-DB_CONNECTION_LIMIT
+DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
+DATABASE_URL, DB_SCHEMA, DB_CONNECTION_LIMIT
+MYSQL_SOURCE_URL o MYSQL_SOURCE_HOST, MYSQL_SOURCE_PORT, MYSQL_SOURCE_DATABASE, MYSQL_SOURCE_USER, MYSQL_SOURCE_PASSWORD
 JWT_SECRET, JWT_REFRESH_SECRET, JWT_EXPIRES_IN, JWT_REFRESH_EXPIRES_IN
 AI_AGENT_URL
 LLM_BASE_URL, LLM_API_KEY, LLM_MODEL
@@ -517,7 +523,7 @@ La demo ya tiene el flujo funcional, pero antes de producción hay que completar
 
 - worker que consuma y reintente `notificaciones_email`;
 - proveedor real de correo y plantillas versionadas;
-- backup y prueba de restauración de MySQL;
+- backup y prueba de restauración de PostgreSQL;
 - secretos gestionados fuera de archivos locales;
 - CI con lint, tests, migraciones y build;
 - observabilidad con logs estructurados, métricas y alertas;

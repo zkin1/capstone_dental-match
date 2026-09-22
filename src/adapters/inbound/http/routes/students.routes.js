@@ -1,9 +1,9 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const database = require('../../../../infrastructure/database/connection');
-const StudentRepository = require('../../../outbound/persistence/mysql/student.repository');
+const StudentRepository = require('../../../outbound/persistence/postgres/student.repository');
 const StudentService = require('../../../../application/students/student.service');
-const studentCodeService = require('../../../outbound/persistence/mysql/student-code.adapter');
+const studentCodeService = require('../../../outbound/persistence/postgres/student-code.adapter');
 const passwordHasher = require('../../../outbound/security/password.adapter');
 const { authenticateToken, requireRole } = require('../middleware/auth');
 
@@ -18,7 +18,10 @@ const publicRegistrationLimit = rateLimit({
   limit: 10,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { success: false, message: 'Demasiados intentos de registro. Intenta nuevamente más tarde.' },
+  message: {
+    success: false,
+    message: 'Demasiados intentos de registro. Intenta nuevamente más tarde.',
+  },
 });
 
 router.post('/register', publicRegistrationLimit, async (req, res, next) => {

@@ -1,16 +1,15 @@
 services:
   db:
-    image: mysql:8.4
+    image: postgres:17-alpine
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?Define DB_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${DB_NAME:-dental_matching}
-      MYSQL_USER: ${DB_USER:-dental_app}
-      MYSQL_PASSWORD: ${DB_PASSWORD:?Define DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME:-dental_matching}
+      POSTGRES_USER: ${DB_USER:-dental_app}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Define DB_PASSWORD}
     volumes:
-      - mysql_data:/var/lib/mysql
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$$MYSQL_ROOT_PASSWORD"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -25,10 +24,11 @@ services:
       TZ: ${TZ:-America/Santiago}
       PORT: 3000
       DB_HOST: db
-      DB_PORT: 3306
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-dental_matching}
       DB_USER: ${DB_USER:-dental_app}
       DB_PASSWORD: ${DB_PASSWORD:?Define DB_PASSWORD}
-      DB_NAME: ${DB_NAME:-dental_matching}
+      DB_SCHEMA: ${DB_SCHEMA:-dental_match}
       JWT_SECRET: ${JWT_SECRET:?Define JWT_SECRET}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?Define JWT_REFRESH_SECRET}
       AI_AGENT_URL: http://ai-agent:8001
@@ -60,4 +60,4 @@ services:
       - "host.docker.internal:host-gateway"
 
 volumes:
-  mysql_data:
+  postgres_data:

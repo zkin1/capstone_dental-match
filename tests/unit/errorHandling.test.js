@@ -1,7 +1,14 @@
 const { AppError, ValidationError, DatabaseError, NotFoundError } = require('../../src/shared/errors/AppError');
-const { errorHandler, notFoundHandler, asyncHandler } = require('../../src/adapters/inbound/http/middleware/errorHandler');
+const {
+  errorHandler,
+  notFoundHandler,
+  asyncHandler,
+} = require('../../src/adapters/inbound/http/middleware/errorHandler');
 
-const response = () => ({ status: jest.fn().mockReturnThis(), json: jest.fn().mockReturnThis() });
+const response = () => ({
+  status: jest.fn().mockReturnThis(),
+  json: jest.fn().mockReturnThis(),
+});
 
 describe('errores del BFF', () => {
   test('preserva errores operacionales y detalles de validación', () => {
@@ -10,13 +17,17 @@ describe('errores del BFF', () => {
     expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json.mock.calls[0][0]).toMatchObject({
       success: false,
-      error: { message: 'Datos inválidos', requestId: 'req-1', validationErrors: [{ field: 'email' }] },
+      error: {
+        message: 'Datos inválidos',
+        requestId: 'req-1',
+        validationErrors: [{ field: 'email' }],
+      },
     });
   });
 
   test('convierte duplicados en conflicto y oculta errores internos en producción', () => {
     const conflict = response();
-    errorHandler(Object.assign(new Error('sql'), { code: 'ER_DUP_ENTRY' }), {}, conflict);
+    errorHandler(Object.assign(new Error('sql'), { code: '23505' }), {}, conflict);
     expect(conflict.status).toHaveBeenCalledWith(409);
 
     const previous = process.env.NODE_ENV;
@@ -32,7 +43,7 @@ describe('errores del BFF', () => {
   test('normaliza errores de base de datos, JSON y errores operacionales externos', () => {
     const db = response();
     const dbLog = jest.spyOn(console, 'error').mockImplementation(() => {});
-    errorHandler(Object.assign(new Error('db'), { code: 'ER_BAD_DB_ERROR' }), { requestId: 'db-1' }, db);
+    errorHandler(Object.assign(new Error('db'), { code: '42P01' }), { requestId: 'db-1' }, db);
     expect(db.status).toHaveBeenCalledWith(500);
     expect(db.json.mock.calls[0][0].error.errorCode).toBe('DATABASE_ERROR');
     dbLog.mockRestore();
@@ -55,8 +66,10 @@ describe('errores del BFF', () => {
     expect(missing.mock.calls[0][0].statusCode).toBe(404);
 
     const next = jest.fn();
-    asyncHandler(async () => { throw new Error('fallo'); })({}, {}, next);
-    await new Promise(resolve => setImmediate(resolve));
+    asyncHandler(async () => {
+      throw new Error('fallo');
+    })({}, {}, next);
+    await new Promise((resolve) => setImmediate(resolve));
     expect(next).toHaveBeenCalledWith(expect.objectContaining({ message: 'fallo' }));
   });
 });
