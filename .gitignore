@@ -1,0 +1,15 @@
+# Instrucciones locales de Codex; no subir al repositorio.
+AGENTS.md
+
+# Datos locales y secretos
+.env
+.env.*
+!.env.example
+node_modules/
+client/node_modules/
+client/dist/
+coverage/
+.obsidian/
+.vercel/
+__pycache__/
+entrega-integrantes/
