@@ -478,6 +478,8 @@ AI_AGENT_URL
 LLM_BASE_URL, LLM_API_KEY, LLM_MODEL
 ```
 
+El matching masivo mantiene una conexión para el bloqueo de sesión; `DB_CONNECTION_LIMIT` debe ser al menos `2`. Con un pooler externo, usar modo de sesión mientras exista ese bloqueo.
+
 En la configuración actual se usa `TZ=America/Santiago` para fechas y horarios de negocio. No cambiar la zona horaria sin revisar disponibilidad, próximas fechas y reportes.
 
 ## 16. Verificación realizada

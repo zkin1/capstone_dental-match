@@ -191,3 +191,11 @@ UNION ALL SELECT 'especialidades_estudiante', COUNT(*) FROM dental_match.especia
 UNION ALL SELECT 'asignaciones', COUNT(*) FROM dental_match.asignaciones
 UNION ALL SELECT 'notificaciones_email', COUNT(*) FROM dental_match.notificaciones_email;
 ```
+
+## Verificación de la implementación
+
+El backend de este repositorio usa PostgreSQL mediante `pg`, el esquema `dental_match` y los repositorios PostgreSQL. Las 49 pruebas automatizadas pasaron. En un PostgreSQL 16 temporal se comprobaron la migración, el alta y login de administrador, el registro de estudiante, el intake de paciente, una asignación y el matching masivo. El agente IA no estaba disponible en esa prueba y se usó el fallback previsto.
+
+El esquema alojado se verificó por separado en el editor SQL: seis tablas de negocio y `schema_migrations`. La prueba de este backend contra esa instancia alojada queda pendiente de configurar `DATABASE_URL` de forma segura.
+
+El matching masivo mantiene un bloqueo de sesión mientras hace consultas por otra conexión; por eso `DB_CONNECTION_LIMIT` debe ser al menos `2` y el pooler, si se usa, debe conservar sesiones.
