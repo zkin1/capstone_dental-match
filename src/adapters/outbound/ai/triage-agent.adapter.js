@@ -27,12 +27,25 @@ async function preCategorizar(respuestas) {
       body: JSON.stringify({ answers: respuestas }),
       signal: controller.signal,
     });
-    if (!res.ok) return null;
+
+    if (!res.ok) {
+      const bodyText = await res.text().catch(() => '');
+      console.error(`AI Agent respondió ${res.status}: ${bodyText}`);
+      const err = new Error(`AI Agent error ${res.status}: ${bodyText}`);
+      err.statusCode = res.status;
+      throw err;
+    }
+
     const data = await res.json();
     return data.pre_categorization || null;
   } catch (e) {
-    console.warn('AI Agent no disponible, usando fallback:', e.message);
-    return null;
+    console.error('AI Agent falló:', e.name, e.message);
+    if (e.name === 'AbortError') {
+      const err = new Error('Timeout esperando al agente de IA (15s)');
+      err.statusCode = 504;
+      throw err;
+    }
+    throw e;
   } finally {
     clearTimeout(timeout);
   }
