@@ -37,7 +37,7 @@ class LLMClient:
 
         self.base_url = base_url or default_url
         self.model = model or os.getenv("LLM_MODEL") or default_model
-        self.client = OpenAI(base_url=self.base_url, api_key=api_key or default_key, timeout=12.0, max_retries=0)
+        self.client = OpenAI(base_url=self.base_url, api_key=api_key or default_key, timeout=45.0, max_retries=0)
 
     def chat(self, system_prompt, user_prompt, temperature=0.2):
         options = dict(
