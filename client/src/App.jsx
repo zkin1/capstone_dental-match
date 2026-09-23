@@ -15,6 +15,7 @@ import Landing from './pages/Landing';
 import RegistroPaciente from './pages/RegistroPaciente';
 import RegistroEstudiante from './pages/RegistroEstudiante';
 import Notifications from './pages/Notifications';
+import AgentPanel from './pages/AgentPanel';
 import './App.css';
 
 function homeFor(role) {
@@ -52,6 +53,7 @@ function AppRoutes() {
         <Route path="assignments" element={<RoleRoute roles={['admin', 'coordinator']}><Assignments /></RoleRoute>} />
         <Route path="mis-asignaciones" element={<RoleRoute roles={['student']}><MisAsignaciones /></RoleRoute>} />
         <Route path="notifications" element={<RoleRoute roles={['admin', 'coordinator']}><Notifications /></RoleRoute>} />
+        <Route path="agent" element={<RoleRoute roles={['admin', 'coordinator']}><AgentPanel /></RoleRoute>} />
         <Route path="*" element={<Navigate to={homeFor(user?.role)} replace />} />
       </Route>
     </Routes>

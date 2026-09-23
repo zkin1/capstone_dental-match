@@ -1,5 +1,18 @@
 const AI_AGENT_URL = process.env.AI_AGENT_URL || 'http://localhost:8001';
 
+async function getStatus() {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5000);
+  try {
+    const response = await fetch(`${AI_AGENT_URL}/health`, { signal: controller.signal });
+    return response.ok ? response.json() : null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function preCategorizar(respuestas) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
@@ -25,4 +38,4 @@ async function preCategorizar(respuestas) {
   }
 }
 
-module.exports = { preCategorizar };
+module.exports = { getStatus, preCategorizar };

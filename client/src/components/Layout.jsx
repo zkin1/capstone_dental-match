@@ -43,6 +43,7 @@ export default function Layout() {
         { to: '/matching', icon: 'chart', label: 'Matching' },
         { to: '/assignments', icon: 'link', label: 'Asignaciones' },
         { to: '/notifications', icon: 'mail', label: 'Notificaciones' },
+        { to: '/agent', icon: 'robot', label: 'Agente IA' },
       ];
 
   const initials = (user?.nombre_completo || user?.nombre || 'U')

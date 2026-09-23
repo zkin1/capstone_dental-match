@@ -266,6 +266,28 @@ tbody tr:hover { background: var(--dm-surface-sunken); }
 .empty-action { margin-top: 18px; }
 .muted { color: var(--dm-text-muted); }
 
+/* ===== Panel del agente ===== */
+.agent-explainer, .agent-workspace, .agent-role-grid { display: grid; gap: 16px; }
+.agent-explainer { grid-template-columns: repeat(3, 1fr); margin-bottom: 20px; }
+.agent-explainer > div { display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; align-items: center; }
+.agent-explainer .dm-icon { grid-row: 1 / 3; color: var(--dm-primary-700); }
+.agent-explainer span, .agent-case, .agent-role-grid p { color: var(--dm-text-muted); font-size: var(--dm-text-md); }
+.agent-workspace { grid-template-columns: 1fr 1fr; margin-bottom: 28px; }
+.agent-workspace h2, .agent-section h2 { margin-bottom: 16px; font-size: var(--dm-text-xl); }
+.agent-case { min-height: 64px; margin-bottom: 18px; line-height: 1.5; }
+.agent-error { margin: 16px 0 0; }
+.agent-result { min-height: 240px; }
+.agent-meta { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 20px; }
+.agent-meta span { color: var(--dm-text-muted); font-size: var(--dm-text-sm); }
+.agent-decision { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.agent-decision div { padding-top: 12px; border-top: 1px solid var(--dm-border); }
+.agent-decision dt { color: var(--dm-text-muted); font-size: var(--dm-text-sm); }
+.agent-decision dd { margin: 5px 0 0; font-weight: 700; }
+.agent-section { margin-top: 28px; }
+.agent-role-grid { grid-template-columns: repeat(4, 1fr); }
+.agent-role-grid h3 { margin: 14px 0 8px; }
+.agent-role-grid p { line-height: 1.5; }
+
 .skeleton {
   background: linear-gradient(90deg, var(--dm-border) 25%, var(--dm-surface-sunken) 50%, var(--dm-border) 75%);
   background-size: 200% 100%;
@@ -802,6 +824,8 @@ tbody tr:hover { background: #f4f8f7; }
 }
 
 @media (max-width: 1024px) {
+  .agent-explainer, .agent-workspace { grid-template-columns: 1fr; }
+  .agent-role-grid { grid-template-columns: repeat(2, 1fr); }
   .login-screen { grid-template-columns: 1fr; }
   .login-context { grid-column: 1; grid-row: 1; min-height: 260px; padding: 28px; }
   .login-context-copy { margin: 42px 0 0; }
@@ -817,6 +841,7 @@ tbody tr:hover { background: #f4f8f7; }
   .main-content { padding: 78px 18px 30px; }
 }
 @media (max-width: 640px) {
+  .agent-decision, .agent-role-grid { grid-template-columns: 1fr; }
   .main-content { padding: 70px 14px 22px; }
   .page-header h1 { font-size: 2.35rem; }
   .login-card { padding: 28px 20px; }
