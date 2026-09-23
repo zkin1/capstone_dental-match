@@ -15,7 +15,7 @@ async function getStatus() {
 
 async function preCategorizar(respuestas) {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15000);
+  const timeout = setTimeout(() => controller.abort(), 50000);
 
   try {
     const res = await fetch(`${AI_AGENT_URL}/pre-categorize`, {
