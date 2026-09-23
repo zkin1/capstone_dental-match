@@ -42,9 +42,9 @@ router.post('/agent-preview', async (req, res, next) => {
 
     const startedAt = Date.now();
     const [agent, preCategorizacion] = await Promise.all([
-      triageAgent.getStatus(),
-      triageAgent.preCategorizar(answers),
-    ]);
+    triageAgent.getStatus(),
+    triageAgent.preCategorizar(answers),
+  ]);
     if (!preCategorizacion) {
       throw new AppError('El agente no respondió. Intenta nuevamente.', 503, 'AI_AGENT_UNAVAILABLE');
     }
