@@ -29,23 +29,21 @@ async function preCategorizar(respuestas) {
     });
 
     if (!res.ok) {
-      const bodyText = await res.text().catch(() => '');
-      console.error(`AI Agent respondió ${res.status}: ${bodyText}`);
-      const err = new Error(`AI Agent error ${res.status}: ${bodyText}`);
-      err.statusCode = res.status;
-      throw err;
+      console.warn('AI Agent respondió con un estado no exitoso, usando fallback');
+      return null;
     }
 
     const data = await res.json();
     return data.pre_categorization || null;
   } catch (e) {
-    console.error('AI Agent falló:', e.name, e.message);
     if (e.name === 'AbortError') {
-      const err = new Error('Timeout esperando al agente de IA (15s)');
+      console.error('AI Agent falló:', e.name, e.message);
+      const err = new Error('Timeout esperando al agente de IA (50s)');
       err.statusCode = 504;
       throw err;
     }
-    throw e;
+    console.warn('AI Agent no disponible, usando fallback:', e.message);
+    return null;
   } finally {
     clearTimeout(timeout);
   }
