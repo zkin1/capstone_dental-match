@@ -1,0 +1,42 @@
+ .env.example                                       |  17 [32m+[m[31m-[m
+ README.md                                          |  46 [32m+[m[31m--[m
+ docker-compose.yml                                 |  20 [32m+[m[31m-[m
+ docs/DATABASE_MIGRATION.md                         | 193 [32m++++++++++[m
+ package-lock.json                                  | 166 [32m++++++++[m[31m-[m
+ package.json                                       |   5 [32m+[m[31m-[m
+ scripts/create-admin.js                            |  10 [32m+[m[31m-[m
+ scripts/migrate-mysql-to-postgres.js               | 395 [32m+++++++++++++++++++++[m
+ server.js                                          |  25 [32m+[m[31m-[m
+ .../inbound/http/controllers/auth.controller.js    |  14 [32m+[m[31m-[m
+ .../inbound/http/middleware/errorHandler.js        |  19 [32m+[m[31m-[m
+ .../inbound/http/routes/assignments.routes.js      |   2 [32m+[m[31m-[m
+ .../inbound/http/routes/dashboard.routes.js        |   2 [32m+[m[31m-[m
+ .../inbound/http/routes/matching.routes.js         |   2 [32m+[m[31m-[m
+ .../inbound/http/routes/notifications.routes.js    |   2 [32m+[m[31m-[m
+ .../inbound/http/routes/patients.routes.js         |   9 [32m+[m[31m-[m
+ .../inbound/http/routes/students.routes.js         |   9 [32m+[m[31m-[m
+ .../persistence/mysql/assignment.repository.js     |  95 [31m-----[m
+ .../persistence/mysql/dashboard.repository.js      |  36 [31m--[m
+ .../persistence/mysql/matching.repository.js       | 181 [31m----------[m
+ .../persistence/mysql/patient.repository.js        | 106 [31m------[m
+ .../persistence/mysql/student.repository.js        | 142 [31m--------[m
+ .../persistence/postgres/assignment.repository.js  | 101 [32m++++++[m
+ .../{mysql => postgres}/auth.repository.js         |  49 [32m+[m[31m--[m
+ .../persistence/postgres/dashboard.repository.js   |  38 [32m++[m
+ .../persistence/postgres/matching.repository.js    | 228 [32m++++++++++++[m
+ .../notifications.repository.js                    |  13 [32m+[m[31m-[m
+ .../persistence/postgres/patient.repository.js     | 138 [32m+++++++[m
+ .../{mysql => postgres}/student-code.adapter.js    |   6 [32m+[m[31m-[m
+ .../persistence/postgres/student.repository.js     | 177 [32m+++++++++[m
+ src/infrastructure/database/connection.js          |  74 [32m++[m[31m--[m
+ src/infrastructure/database/migrationManager.js    |  60 [32m++[m[31m--[m
+ .../20260907000001_modular_monolith_schema.js      | 276 [31m--------------[m
+ .../20260907000002_harden_legacy_foreign_keys.js   |  38 [31m--[m
+ .../20260907000003_align_legacy_field_lengths.js   |   9 [31m-[m
+ .../20260922000001_postgresql_baseline.js          | 175 [32m+++++++++[m
+ src/infrastructure/http/app.js                     |  55 [32m+[m[31m--[m
+ tests/integration/api.test.js                      |  76 [32m++[m[31m--[m
+ tests/unit/authService.test.js                     | 111 [32m++++[m[31m--[m
+ tests/unit/errorHandling.test.js                   |  27 [32m+[m[31m-[m
+ tests/unit/matching.test.js                        | 151 [32m+++++[m[31m---[m
+ 41 files changed, 2144 insertions(+), 1154 deletions(-)
