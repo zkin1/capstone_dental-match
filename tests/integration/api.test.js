@@ -1,4 +1,17 @@
 const request = require('supertest');
+jest.mock(
+  '../../src/adapters/outbound/persistence/postgres/auth.repository',
+  () =>
+    jest.fn().mockImplementation(() => ({
+      findById: jest.fn(async (id) => ({
+        id,
+        status: 'active',
+        role: Number(id) === 2 ? 'student' : 'coordinator',
+        permissions: [],
+        codigo_estudiante: 'EST-2026-123456',
+      })),
+    }))
+);
 
 const mockConnection = { query: jest.fn(), release: jest.fn() };
 jest.mock('../../src/infrastructure/database/connection', () => ({
@@ -6,11 +19,15 @@ jest.mock('../../src/infrastructure/database/connection', () => ({
   getPoolConnection: jest.fn().mockResolvedValue(mockConnection),
   executeQuery: jest.fn(),
   transaction: jest.fn(async (work) => work(mockConnection)),
-  performHealthCheck: jest.fn().mockResolvedValue({ status: 'healthy', responseTime: 1 }),
+  performHealthCheck: jest
+    .fn()
+    .mockResolvedValue({ status: 'healthy', responseTime: 1 }),
   closePool: jest.fn(),
 }));
 
-const { generateToken } = require('../../src/adapters/outbound/security/jwt.adapter');
+const {
+  generateToken,
+} = require('../../src/adapters/outbound/security/jwt.adapter');
 const app = require('../../src/infrastructure/http/app');
 const originalFetch = global.fetch;
 
@@ -40,22 +57,36 @@ describe('contrato HTTP del BFF', () => {
     });
   });
 
-  test.each(['/api/pacientes', '/api/estudiantes', '/api/asignaciones', '/api/matching/stats', '/api/notificaciones'])(
-    'protege %s sin sesión',
-    async (endpoint) => {
-      expect((await request(app).get(endpoint)).status).toBe(401);
-    },
-  );
+  test.each([
+    '/api/pacientes',
+    '/api/estudiantes',
+    '/api/asignaciones',
+    '/api/matching/stats',
+    '/api/notificaciones',
+  ])('protege %s sin sesión', async (endpoint) => {
+    expect((await request(app).get(endpoint)).status).toBe(401);
+  });
 
   test('protege el panel de análisis del agente', async () => {
-    expect((await request(app).post('/api/matching/agent-preview').send({ answers: { tipo_dolor: 'Sin dolor' } })).status).toBe(401);
+    expect(
+      (
+        await request(app)
+          .post('/api/matching/agent-preview')
+          .send({ answers: { tipo_dolor: 'Sin dolor' } })
+      ).status
+    ).toBe(401);
   });
 
   test('muestra por separado la salida del agente y la decisión clínica', async () => {
-    global.fetch = jest.fn()
+    global.fetch = jest
+      .fn()
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ status: 'ok', provider: 'gemini', model: 'gemini-2.5-flash' }),
+        json: async () => ({
+          status: 'ok',
+          provider: 'gemini',
+          model: 'gemini-2.5-flash',
+        }),
       })
       .mockResolvedValueOnce({
         ok: true,
@@ -69,7 +100,11 @@ describe('contrato HTTP del BFF', () => {
           },
         }),
       });
-    const token = generateToken({ id: 3, email: 'coord@example.cl', role: 'coordinator' });
+    const token = generateToken({
+      id: 3,
+      email: 'coord@example.cl',
+      role: 'coordinator',
+    });
 
     const response = await request(app)
       .post('/api/matching/agent-preview')
@@ -77,8 +112,13 @@ describe('contrato HTTP del BFF', () => {
       .send({ answers: { queja: 'Dolor e hinchazón con fiebre' }, edad: 32 });
 
     expect(response.status).toBe(200);
-    expect(response.body.data.agent).toMatchObject({ provider: 'gemini', model: 'gemini-2.5-flash' });
-    expect(response.body.data.preCategorizacion.signos_infeccion).toBe('Absceso/Hinchazon con fiebre');
+    expect(response.body.data.agent).toMatchObject({
+      provider: 'gemini',
+      model: 'gemini-2.5-flash',
+    });
+    expect(response.body.data.preCategorizacion.signos_infeccion).toBe(
+      'Absceso/Hinchazon con fiebre'
+    );
     expect(response.body.data.categoria).toMatchObject({
       specialty: 'Endodoncia',
       priority: 'Muy Alta',
@@ -118,7 +158,9 @@ describe('contrato HTTP del BFF', () => {
       role: 'student',
       codigo_estudiante: 'EST-2026-123456',
     });
-    const response = await request(app).get('/api/dashboard/stats').set('Cookie', `accessToken=${token}`);
+    const response = await request(app)
+      .get('/api/dashboard/stats')
+      .set('Cookie', `accessToken=${token}`);
     expect(response.status).toBe(403);
   });
 
@@ -134,7 +176,9 @@ describe('contrato HTTP del BFF', () => {
       email: 'coord@example.cl',
       role: 'coordinator',
     });
-    const response = await request(app).get('/api/dashboard/stats').set('Cookie', `accessToken=${token}`);
+    const response = await request(app)
+      .get('/api/dashboard/stats')
+      .set('Cookie', `accessToken=${token}`);
     expect(response.status).toBe(200);
     expect(response.body.data).toMatchObject({
       pacientes: 4,

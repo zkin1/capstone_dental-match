@@ -7,12 +7,17 @@ import Badge from '../components/Badge';
 import Table from '../components/Table';
 import EmptyState from '../components/EmptyState';
 import Skeleton from '../components/Skeleton';
+import Button from '../components/Button';
 
 function formatDate(value) {
   if (!value) return '-';
   try {
     return new Date(value).toLocaleString('es-ES', {
-      day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
     });
   } catch {
     return value;
@@ -24,6 +29,7 @@ export default function Notifications() {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [sending, setSending] = useState(null);
   const toast = useToast();
 
   const loadNotifications = useCallback(async () => {
@@ -39,35 +45,112 @@ export default function Notifications() {
     }
   }, [toast]);
 
-  useEffect(() => { loadNotifications(); }, [loadNotifications]);
+  useEffect(() => {
+    loadNotifications();
+  }, [loadNotifications]);
+
+  async function send(notification) {
+    setSending(notification.id);
+    try {
+      const result = await apiFetch(
+        `/notificaciones/${notification.id}/enviar`,
+        { method: 'POST' }
+      );
+      if (result.data.estado === 'enviado') toast.success(result.data.message);
+      else toast.error(result.data.message);
+      await loadNotifications();
+    } catch (e) {
+      toast.error(e.message);
+    } finally {
+      setSending(null);
+    }
+  }
 
   const columns = [
-    { key: 'destinatario', label: 'Destinatario', render: n => n.email_destino },
-    { key: 'tipo', label: 'Tipo', render: n => <Badge value={n.tipo_notificacion} /> },
-    { key: 'asunto', label: 'Asunto', render: n => n.asunto },
     {
-      key: 'mensaje', label: 'Mensaje',
-      render: n => {
+      key: 'destinatario',
+      label: 'Destinatario',
+      render: (n) => n.email_destino,
+    },
+    {
+      key: 'tipo',
+      label: 'Tipo',
+      render: (n) => <Badge value={n.tipo_notificacion} />,
+    },
+    { key: 'asunto', label: 'Asunto', render: (n) => n.asunto },
+    {
+      key: 'mensaje',
+      label: 'Mensaje',
+      render: (n) => {
         const text = n.mensaje || '';
         return text.length > 80 ? text.slice(0, 80) + '…' : text;
       },
     },
-    { key: 'estado', label: 'Estado', render: n => <Badge value={n.estado} /> },
-    { key: 'fecha', label: 'Fecha', render: n => formatDate(n.fecha_envio || n.fecha_creacion) },
-    { key: 'intentos', label: 'Intentos', render: n => n.intentos_envio || 0 },
+    {
+      key: 'estado',
+      label: 'Estado',
+      render: (n) => <Badge value={n.estado} />,
+    },
+    {
+      key: 'fecha',
+      label: 'Fecha',
+      render: (n) => formatDate(n.fecha_envio || n.fecha_creacion),
+    },
+    {
+      key: 'intentos',
+      label: 'Intentos',
+      render: (n) => n.intentos_envio || 0,
+    },
+    { key: 'error_envio', label: 'Último error' },
+    {
+      key: 'acciones',
+      label: 'Acciones',
+      render: (n) =>
+        ['pendiente', 'fallido'].includes(n.estado) ||
+        (n.estado === 'enviando' &&
+          Date.now() - new Date(n.fecha_reclamo).getTime() > 300000) ? (
+          <Button
+            variant="secondary"
+            size="sm"
+            loading={sending === n.id}
+            disabled={sending !== null}
+            onClick={() => send(n)}
+          >
+            {n.estado === 'fallido' ? 'Reintentar' : 'Enviar'}
+          </Button>
+        ) : (
+          '—'
+        ),
+    },
   ];
 
   return (
     <div className="page">
       <div className="page-header">
-        <div><h1>Notificaciones</h1><p className="page-subtitle">Cola auditable generada al crear asignaciones.</p></div>
+        <div>
+          <h1>Notificaciones</h1>
+          <p className="page-subtitle">
+            Envía o reintenta los avisos de asignación. Enviado significa
+            aceptado por el proveedor.
+          </p>
+        </div>
+        <Button variant="secondary" onClick={loadNotifications}>
+          Actualizar
+        </Button>
       </div>
 
-      {error && <div className="alert" role="alert"><Icon name="warning" size={18} />{error}</div>}
+      {error && (
+        <div className="alert" role="alert">
+          <Icon name="warning" size={18} />
+          {error}
+        </div>
+      )}
 
       {loading ? (
         <>
-          <span className="visually-hidden" role="status">Cargando notificaciones…</span>
+          <span className="visually-hidden" role="status">
+            Cargando notificaciones…
+          </span>
           <Skeleton variant="table" rows={5} />
         </>
       ) : (
@@ -75,7 +158,7 @@ export default function Notifications() {
           caption="Historial de notificaciones"
           columns={columns}
           rows={notifications}
-          keyFn={n => n.id}
+          keyFn={(n) => n.id}
           empty={
             <EmptyState
               icon="mail"

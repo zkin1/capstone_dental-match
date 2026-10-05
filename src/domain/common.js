@@ -12,10 +12,19 @@ const SPECIALTIES = Object.freeze([
 const CITIES = Object.freeze(['Metropolitana', 'Valparaíso', 'Concepción']);
 const PRIORITIES = Object.freeze(['Baja', 'Moderada', 'Alta', 'Muy Alta']);
 const ASSIGNMENT_STATES = Object.freeze([
-  'asignado', 'notificado', 'contactado', 'en_tratamiento', 'completado', 'cancelado',
+  'asignado',
+  'notificado',
+  'contactado',
+  'en_tratamiento',
+  'completado',
+  'cancelado',
+  'derivacion_pendiente',
+  'derivado',
 ]);
 const ACTIVE_ASSIGNMENT_STATES = Object.freeze(
-  ASSIGNMENT_STATES.filter(state => !['completado', 'cancelado'].includes(state)),
+  ASSIGNMENT_STATES.filter(
+    (state) => !['completado', 'cancelado', 'derivado'].includes(state)
+  )
 );
 
 const TRANSITIONS = Object.freeze({
@@ -25,6 +34,8 @@ const TRANSITIONS = Object.freeze({
   en_tratamiento: ['completado', 'cancelado'],
   completado: [],
   cancelado: [],
+  derivacion_pendiente: [],
+  derivado: [],
 });
 
 const specialtyAliases = new Map([
@@ -56,7 +67,9 @@ const priorityAliases = new Map([
 ]);
 
 function normalizedKey(value) {
-  return String(value || '').trim().toLocaleLowerCase('es');
+  return String(value || '')
+    .trim()
+    .toLocaleLowerCase('es');
 }
 
 function normalizeSpecialty(value) {

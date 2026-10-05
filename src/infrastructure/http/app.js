@@ -8,7 +8,10 @@ const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
 const database = require('../database/connection');
 const routes = require('../../adapters/inbound/http/routes');
-const { errorHandler, notFoundHandler } = require('../../adapters/inbound/http/middleware/errorHandler');
+const {
+  errorHandler,
+  notFoundHandler,
+} = require('../../adapters/inbound/http/middleware/errorHandler');
 
 const app = express();
 const projectRoot = path.join(__dirname, '../../..');
@@ -35,7 +38,7 @@ app.use(
     max: process.env.NODE_ENV === 'test' ? 10000 : 500,
     standardHeaders: true,
     legacyHeaders: false,
-  }),
+  })
 );
 
 app.get('/api', (req, res) =>
@@ -43,7 +46,7 @@ app.get('/api', (req, res) =>
     success: true,
     message: 'Dental Matching BFF',
     version: '3.0.0',
-  }),
+  })
 );
 
 app.get('/api/health', async (req, res) => {
@@ -66,7 +69,7 @@ app.get('/api/info', (req, res) =>
       matching: 'Algoritmo determinista ponderado',
       ai: 'Pre-categorización solamente',
     },
-  }),
+  })
 );
 
 app.use('/api/auth', routes.auth);
@@ -76,11 +79,13 @@ app.use('/api/asignaciones', routes.assignments);
 app.use('/api/matching', routes.matching);
 app.use('/api/dashboard', routes.dashboard);
 app.use('/api/notificaciones', routes.notifications);
+app.use('/api/derivaciones', routes.referrals);
+app.use('/api/users', routes.users);
 
 app.use(
   express.static(frontendDir, {
     maxAge: process.env.NODE_ENV === 'production' ? '1h' : 0,
-  }),
+  })
 );
 app.get('*', (req, res, next) => {
   if (req.path.startsWith('/api/')) return next();

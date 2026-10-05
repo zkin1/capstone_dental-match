@@ -11,10 +11,14 @@ class StudentRepository {
 
   async register(student, passwordHash) {
     return this.database.transaction(async (connection) => {
-      const students = await connection.query('SELECT 1 FROM estudiantes_odontologia WHERE email = $1 LIMIT 1', [
-        student.email,
-      ]);
-      const users = await connection.query('SELECT 1 FROM users WHERE email = $1 LIMIT 1', [student.email]);
+      const students = await connection.query(
+        'SELECT 1 FROM estudiantes_odontologia WHERE email = $1 LIMIT 1',
+        [student.email]
+      );
+      const users = await connection.query(
+        'SELECT 1 FROM users WHERE email = $1 LIMIT 1',
+        [student.email]
+      );
       if (students.rows.length || users.rows.length) return { duplicate: true };
 
       const code = await this.codeGenerator.generateUniqueCode(connection);
@@ -33,12 +37,13 @@ class StudentRepository {
           student.universidad,
           student.ciudad,
           student.casos_necesarios,
-        ],
+        ]
       );
       const studentId = insert.rows[0].id;
 
       for (const specialty of student.specialties) {
-        const clinic = specialty === 'Odontopediatría' ? CLINICS.child : CLINICS.adult;
+        const clinic =
+          specialty === 'Odontopediatría' ? CLINICS.child : CLINICS.adult;
         for (const slot of student.schedules) {
           await connection.query(
             `INSERT INTO especialidades_estudiante
@@ -52,7 +57,7 @@ class StudentRepository {
               slot.hora_inicio,
               slot.hora_fin,
               Number(slot.capacidad_pacientes) || 1,
-            ],
+            ]
           );
         }
       }
@@ -68,7 +73,7 @@ class StudentRepository {
           JSON.stringify(['assignments:own']),
           code,
           student.telefono,
-        ],
+        ]
       );
       return { id: studentId, codigo_estudiante: code };
     });
@@ -85,7 +90,7 @@ class StudentRepository {
          FROM estudiantes_odontologia e
          LEFT JOIN especialidades_estudiante ee ON ee.id_estudiante = e.id AND ee.activo = TRUE
         GROUP BY e.id
-        ORDER BY (e.estado = 'activo') DESC, e.nombre_completo ASC`,
+        ORDER BY (e.estado = 'activo') DESC, e.nombre_completo ASC`
       )
     ).rows;
   }
@@ -97,7 +102,7 @@ class StudentRepository {
               COUNT(*) FILTER (WHERE estado = 'activo') AS activos,
               COALESCE(SUM(casos_activos), 0) AS total_casos_activos,
               COALESCE(SUM(casos_completados), 0) AS total_casos_completados
-         FROM estudiantes_odontologia`,
+         FROM estudiantes_odontologia`
     );
     return result.rows[0];
   }
@@ -106,7 +111,7 @@ class StudentRepository {
     return this.database.transaction(async (connection) => {
       const students = await connection.query(
         'SELECT codigo_estudiante, casos_activos FROM estudiantes_odontologia WHERE id = $1 FOR UPDATE',
-        [id],
+        [id]
       );
       const student = students.rows[0];
       if (!student) return { missing: true };
@@ -115,13 +120,15 @@ class StudentRepository {
 
       const entries = Object.entries(changes);
       const values = entries.map(([, value]) => value);
-      const assignments = entries.map(([field], index) => `${field} = $${index + 1}`);
+      const assignments = entries.map(
+        ([field], index) => `${field} = $${index + 1}`
+      );
       values.push(id);
       await connection.query(
         `UPDATE estudiantes_odontologia
             SET ${assignments.join(', ')}, fecha_actualizacion = CURRENT_TIMESTAMP
           WHERE id = $${values.length}`,
-        values,
+        values
       );
 
       const userFields = [];
@@ -134,16 +141,20 @@ class StudentRepository {
         if (changes[field] !== undefined) addUserField(field, changes[field]);
       }
       if (changes.estado) {
-        addUserField('status', changes.estado === 'activo' ? 'active' : 'inactive');
-        if (changes.estado === 'inactivo') userFields.push('refresh_token_hash = NULL');
+        addUserField(
+          'status',
+          changes.estado === 'activo' ? 'active' : 'inactive'
+        );
+        if (changes.estado === 'inactivo')
+          userFields.push('refresh_token_hash = NULL');
       }
       if (userFields.length) {
         userValues.push(student.codigo_estudiante);
         await connection.query(
           `UPDATE users
               SET ${userFields.join(', ')}, updated_at = CURRENT_TIMESTAMP
-            WHERE codigo_estudiante = $${userValues.length}`,
-          userValues,
+            WHERE codigo_estudiante = $${userValues.length} AND role='student' AND status<>'suspended'`,
+          userValues
         );
       }
       return { success: true };
@@ -154,20 +165,20 @@ class StudentRepository {
     return this.database.transaction(async (connection) => {
       const students = await connection.query(
         'SELECT codigo_estudiante, casos_activos FROM estudiantes_odontologia WHERE id = $1 FOR UPDATE',
-        [id],
+        [id]
       );
       const student = students.rows[0];
       if (!student) return { missing: true };
       if (Number(student.casos_activos) > 0) return { activeCases: true };
       await connection.query(
         "UPDATE estudiantes_odontologia SET estado = 'inactivo', fecha_actualizacion = CURRENT_TIMESTAMP WHERE id = $1",
-        [id],
+        [id]
       );
       await connection.query(
         `UPDATE users
             SET status = 'inactive', refresh_token_hash = NULL, updated_at = CURRENT_TIMESTAMP
-          WHERE codigo_estudiante = $1`,
-        [student.codigo_estudiante],
+          WHERE codigo_estudiante = $1 AND role='student' AND status<>'suspended'`,
+        [student.codigo_estudiante]
       );
       return { success: true };
     });

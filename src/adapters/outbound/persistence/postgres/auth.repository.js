@@ -1,5 +1,14 @@
-const { executeQuery } = require('../../../../infrastructure/database/connection');
+const {
+  executeQuery,
+} = require('../../../../infrastructure/database/connection');
 const { parseJson } = require('../../../../domain/common');
+const {
+  transaction,
+} = require('../../../../infrastructure/database/connection');
+const {
+  ConflictError,
+  NotFoundError,
+} = require('../../../../shared/errors/AppError');
 
 function normalize(user) {
   if (!user) return null;
@@ -8,24 +17,38 @@ function normalize(user) {
 
 class UserRepository {
   async findById(id) {
-    const { rows } = await executeQuery('SELECT * FROM users WHERE id = $1 LIMIT 1', [id]);
+    const { rows } = await executeQuery(
+      'SELECT * FROM users WHERE id = $1 LIMIT 1',
+      [id]
+    );
     return normalize(rows[0]);
   }
 
   async findByEmail(email) {
-    const { rows } = await executeQuery("SELECT * FROM users WHERE email = $1 AND status = 'active' LIMIT 1", [email]);
+    const { rows } = await executeQuery(
+      'SELECT * FROM users WHERE LOWER(email) = LOWER($1) LIMIT 1',
+      [email]
+    );
     return normalize(rows[0]);
   }
 
   async findByStudentCode(code) {
     const { rows } = await executeQuery(
       "SELECT * FROM users WHERE codigo_estudiante = $1 AND role = 'student' LIMIT 1",
-      [code],
+      [code]
     );
     return normalize(rows[0]);
   }
 
   async create(user) {
+    if (user.role === 'student') {
+      const profile = await executeQuery(
+        "SELECT id FROM estudiantes_odontologia WHERE codigo_estudiante=$1 AND estado='activo'",
+        [user.codigo_estudiante]
+      );
+      if (!profile.rows.length)
+        throw new ConflictError('El estudiante necesita un perfil activo');
+    }
     const { rows } = await executeQuery(
       `INSERT INTO users
        (email, password, nombre_completo, role, permissions, status, telefono, codigo_estudiante)
@@ -39,35 +62,37 @@ class UserRepository {
         JSON.stringify(user.permissions || []),
         user.telefono || null,
         user.codigo_estudiante || null,
-      ],
+      ]
     );
     return normalize(rows[0]);
   }
 
   async updateRefreshToken(id, hash) {
-    return executeQuery('UPDATE users SET refresh_token_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [
-      hash,
-      id,
-    ]);
+    return executeQuery(
+      'UPDATE users SET refresh_token_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+      [hash, id]
+    );
   }
 
   async updateLastLogin(id) {
     return executeQuery(
       'UPDATE users SET last_login = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = $1',
-      [id],
+      [id]
     );
   }
 
   async updatePassword(id, password) {
     return executeQuery(
       'UPDATE users SET password = $1, refresh_token_hash = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
-      [password, id],
+      [password, id]
     );
   }
 
   async update(id, changes) {
     const allowed = ['nombre_completo', 'telefono'];
-    const entries = Object.entries(changes).filter(([key, value]) => allowed.includes(key) && value !== undefined);
+    const entries = Object.entries(changes).filter(
+      ([key, value]) => allowed.includes(key) && value !== undefined
+    );
     if (!entries.length) return this.findById(id);
 
     const values = entries.map(([, value]) => value);
@@ -77,9 +102,64 @@ class UserRepository {
       `UPDATE users
           SET ${assignments.join(', ')}, updated_at = CURRENT_TIMESTAMP
         WHERE id = $${values.length}`,
-      values,
+      values
     );
     return this.findById(id);
+  }
+
+  async listAccounts() {
+    const { rows } =
+      await executeQuery(`SELECT id,email,nombre_completo,role,status,codigo_estudiante,
+      telefono,last_login,created_at FROM users ORDER BY nombre_completo,id`);
+    return rows;
+  }
+
+  async manageAccount(id, changes) {
+    return transaction(async (db) => {
+      await db.query(
+        "SELECT pg_advisory_xact_lock(hashtext('dental_match_accounts'))"
+      );
+      const user = (
+        await db.query('SELECT * FROM users WHERE id=$1 FOR UPDATE', [id])
+      ).rows[0];
+      if (!user) throw new NotFoundError('Usuario', id);
+      if (
+        user.role === 'admin' &&
+        user.status === 'active' &&
+        (changes.role !== 'admin' || changes.status !== 'active')
+      ) {
+        const admins = await db.query(
+          "SELECT id FROM users WHERE role='admin' AND status='active' FOR UPDATE"
+        );
+        if (admins.rows.length <= 1)
+          throw new ConflictError(
+            'Debe quedar al menos un administrador activo'
+          );
+      }
+      if (changes.role === 'student') {
+        const profile = await db.query(
+          "SELECT id FROM estudiantes_odontologia WHERE codigo_estudiante=$1 AND estado='activo'",
+          [user.codigo_estudiante]
+        );
+        if (!profile.rows.length)
+          throw new ConflictError(
+            'El rol estudiante requiere un perfil de estudiante activo'
+          );
+      }
+      const result = await db.query(
+        `UPDATE users SET nombre_completo=$1,role=$2,status=$3,permissions=$4,
+        refresh_token_hash=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=$5
+        RETURNING id,email,nombre_completo,role,status,codigo_estudiante`,
+        [
+          changes.nombre_completo,
+          changes.role,
+          changes.status,
+          JSON.stringify(changes.permissions),
+          id,
+        ]
+      );
+      return result.rows[0];
+    });
   }
 }
 

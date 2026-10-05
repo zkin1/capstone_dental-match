@@ -1,10 +1,16 @@
 const AI_AGENT_URL = process.env.AI_AGENT_URL || 'http://localhost:8001';
+const AI_TIMEOUT_MS = Math.min(
+  50000,
+  Math.max(1000, Number(process.env.AI_AGENT_TIMEOUT_MS) || 20000)
+);
 
 async function getStatus() {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 5000);
   try {
-    const response = await fetch(`${AI_AGENT_URL}/health`, { signal: controller.signal });
+    const response = await fetch(`${AI_AGENT_URL}/health`, {
+      signal: controller.signal,
+    });
     return response.ok ? response.json() : null;
   } catch {
     return null;
@@ -15,7 +21,7 @@ async function getStatus() {
 
 async function preCategorizar(respuestas) {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 50000);
+  const timeout = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
 
   try {
     const res = await fetch(`${AI_AGENT_URL}/pre-categorize`, {
@@ -29,19 +35,15 @@ async function preCategorizar(respuestas) {
     });
 
     if (!res.ok) {
-      console.warn('AI Agent respondió con un estado no exitoso, usando fallback');
+      console.warn(
+        'AI Agent respondió con un estado no exitoso, usando fallback'
+      );
       return null;
     }
 
     const data = await res.json();
     return data.pre_categorization || null;
   } catch (e) {
-    if (e.name === 'AbortError') {
-      console.error('AI Agent falló:', e.name, e.message);
-      const err = new Error('Timeout esperando al agente de IA (50s)');
-      err.statusCode = 504;
-      throw err;
-    }
     console.warn('AI Agent no disponible, usando fallback:', e.message);
     return null;
   } finally {
@@ -49,4 +51,4 @@ async function preCategorizar(respuestas) {
   }
 }
 
-module.exports = { getStatus, preCategorizar };
+module.exports = { getStatus, preCategorizar, AI_TIMEOUT_MS };

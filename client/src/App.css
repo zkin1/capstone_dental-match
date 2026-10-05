@@ -330,7 +330,9 @@ tbody tr:hover { background: var(--dm-surface-sunken); }
   background: var(--dm-surface); border-radius: var(--dm-radius-lg);
   box-shadow: var(--dm-shadow-lg); max-width: 440px; width: 100%; padding: 26px;
   animation: dm-scale-in var(--dm-dur-slow) var(--dm-ease-out);
+  max-height: calc(100dvh - 32px); overflow-y: auto;
 }
+.modal-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .modal h2 { font-size: var(--dm-text-xl); margin-bottom: 10px; }
 .modal-body { color: var(--dm-text-muted); font-size: var(--dm-text-md); }
 .modal-message { display: flex; align-items: flex-start; gap: 8px; }
@@ -851,3 +853,16 @@ tbody tr:hover { background: #f4f8f7; }
   .registration-form { padding: 20px 16px; }
   .confirmation-card { padding: 40px 22px; }
 }
+/* Case detail keeps clinical context, actions and append-only history together. */
+.modal:has(.case-detail) { width: min(820px, 94vw); max-width: 820px; }
+.case-section { padding: 18px 0; border-top: 1px solid var(--border, #e2e2e2); }
+.case-data { display: grid; grid-template-columns: minmax(130px, 1fr) 2fr; gap: 8px 16px; margin: 12px 0; }
+.case-data dt { font-weight: 600; }
+.case-data dd { margin: 0; overflow-wrap: anywhere; }
+.case-answer { display: contents; }
+.case-history { padding-left: 22px; }
+.case-history li { padding: 12px 0; border-bottom: 1px solid #e2e2e2; }
+.case-history p { margin: 6px 0; }
+.case-note { white-space: pre-wrap; overflow-wrap: anywhere; }
+.case-detail .table-actions { flex-wrap: wrap; margin: 12px 0; }
+@media (max-width: 480px) { .case-data { grid-template-columns: 1fr; } .case-data dd { margin-bottom: 8px; } }
