@@ -1,4 +1,7 @@
-const { decideUpdate } = require('../../../../domain/assignments/assignment.policy');
+const {
+  decideUpdate,
+} = require('../../../../domain/assignments/assignment.policy');
+const { appendEvent, lockAssignment } = require('./case-history');
 
 const SELECT_ASSIGNMENTS = `
   SELECT a.id, a.id_paciente, a.id_estudiante, a.fecha_asignacion, a.fecha_cita,
@@ -21,35 +24,37 @@ class AssignmentRepository {
     const db = await this.database.getConnection();
     const students = await db.query(
       "SELECT id, nombre_completo, codigo_estudiante FROM estudiantes_odontologia WHERE codigo_estudiante = $1 AND estado = 'activo'",
-      [studentCode],
+      [studentCode]
     );
     if (!students.rows.length) return null;
-    const result = await db.query(`${SELECT_ASSIGNMENTS} WHERE a.id_estudiante = $1 ORDER BY a.fecha_asignacion DESC`, [
-      students.rows[0].id,
-    ]);
+    const result = await db.query(
+      `${SELECT_ASSIGNMENTS} WHERE a.id_estudiante = $1 ORDER BY a.fecha_asignacion DESC`,
+      [students.rows[0].id]
+    );
     return { student: students.rows[0], rows: result.rows };
   }
 
   async list() {
     const db = await this.database.getConnection();
-    return (await db.query(`${SELECT_ASSIGNMENTS} ORDER BY a.fecha_asignacion DESC LIMIT 500`)).rows;
+    return (
+      await db.query(
+        `${SELECT_ASSIGNMENTS} ORDER BY a.fecha_asignacion DESC LIMIT 500`
+      )
+    ).rows;
   }
 
   async getStats() {
     const db = await this.database.getConnection();
-    return (await db.query('SELECT estado, COUNT(*) AS cantidad FROM asignaciones GROUP BY estado')).rows;
+    return (
+      await db.query(
+        'SELECT estado, COUNT(*) AS cantidad FROM asignaciones GROUP BY estado'
+      )
+    ).rows;
   }
 
   async update(id, input, user) {
     return this.database.transaction(async (connection) => {
-      const result = await connection.query(
-        `SELECT a.*, e.codigo_estudiante
-           FROM asignaciones a
-           JOIN estudiantes_odontologia e ON e.id = a.id_estudiante
-          WHERE a.id = $1 FOR UPDATE`,
-        [id],
-      );
-      const assignment = result.rows[0];
+      const assignment = await lockAssignment(connection, id);
       const decision = decideUpdate(assignment, input, user);
       if (!decision.ok) return decision;
 
@@ -63,36 +68,62 @@ class AssignmentRepository {
       if (decision.nextState !== assignment.estado) {
         add('estado', decision.nextState);
         if (decision.nextState === 'contactado')
-          updates.push('fecha_contacto = COALESCE(fecha_contacto, CURRENT_TIMESTAMP)');
+          updates.push(
+            'fecha_contacto = COALESCE(fecha_contacto, CURRENT_TIMESTAMP)'
+          );
         if (decision.nextState === 'en_tratamiento')
-          updates.push('fecha_inicio_tratamiento = COALESCE(fecha_inicio_tratamiento, CURRENT_TIMESTAMP)');
-        if (decision.nextState === 'completado') updates.push('fecha_completado = CURRENT_TIMESTAMP');
-        if (decision.nextState === 'cancelado') updates.push('fecha_cancelacion = CURRENT_TIMESTAMP');
+          updates.push(
+            'fecha_inicio_tratamiento = COALESCE(fecha_inicio_tratamiento, CURRENT_TIMESTAMP)'
+          );
+        if (decision.nextState === 'completado')
+          updates.push('fecha_completado = CURRENT_TIMESTAMP');
+        if (decision.nextState === 'cancelado')
+          updates.push('fecha_cancelacion = CURRENT_TIMESTAMP');
       }
-      if (decision.observation !== undefined) add('observaciones_estudiante', decision.observation);
+      if (decision.observation !== undefined)
+        add('observaciones_estudiante', decision.observation);
 
       values.push(id);
       await connection.query(
         `UPDATE asignaciones
             SET ${updates.join(', ')}, fecha_actualizacion = CURRENT_TIMESTAMP
           WHERE id = $${values.length}`,
-        values,
+        values
       );
 
-      if (decision.nextState !== assignment.estado && ['completado', 'cancelado'].includes(decision.nextState)) {
+      if (
+        decision.nextState !== assignment.estado &&
+        ['completado', 'cancelado'].includes(decision.nextState)
+      ) {
         await connection.query(
           `UPDATE estudiantes_odontologia
               SET casos_activos = GREATEST(casos_activos - 1, 0),
                   casos_completados = casos_completados + $1,
                   fecha_actualizacion = CURRENT_TIMESTAMP
             WHERE id = $2`,
-          [decision.nextState === 'completado' ? 1 : 0, assignment.id_estudiante],
+          [
+            decision.nextState === 'completado' ? 1 : 0,
+            assignment.id_estudiante,
+          ]
         );
         await connection.query(
           'UPDATE pacientes SET estado = $1, fecha_actualizacion = CURRENT_TIMESTAMP WHERE id = $2',
-          [decision.nextState === 'completado' ? 'completado' : 'pendiente', assignment.id_paciente],
+          [
+            decision.nextState === 'completado' ? 'completado' : 'pendiente',
+            assignment.id_paciente,
+          ]
         );
       }
+      await appendEvent(
+        connection,
+        assignment.id_paciente,
+        id,
+        user,
+        decision.nextState === assignment.estado ? 'nota' : 'estado',
+        assignment.estado,
+        decision.nextState,
+        decision.observation
+      );
       return { ok: true, message: 'Asignación actualizada' };
     });
   }

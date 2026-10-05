@@ -1,4 +1,6 @@
-# Dental Matching
+# Dental Match
+
+El seguimiento, las derivaciones revisadas, el reparto por carga y derivaciones aprobadas, la gestión de cuentas y el envío de correo se incorporaron en Capstone. Consulta [flujo, activación y evidencias](docs/SEGUIMIENTO_DERIVACIONES.md) y [plan previo](docs/PLAN_SEGUIMIENTO_DERIVACIONES.md).
 
 Demo de asignación de pacientes odontológicos a estudiantes de odontología clínica. El sistema recibe el caso del paciente, obtiene una pre-categorización opcional y asigna el caso mediante reglas deterministas de negocio. La inteligencia artificial no decide el matching.
 
@@ -523,8 +525,7 @@ La validación ejecutada durante la refactorización confirmó:
 
 La demo ya tiene el flujo funcional, pero antes de producción hay que completar:
 
-- worker que consuma y reintente `notificaciones_email`;
-- proveedor real de correo y plantillas versionadas;
+- configurar el proveedor de correo Resend y operar el trabajador implementado (ver guía de seguimiento);
 - backup y prueba de restauración de PostgreSQL;
 - secretos gestionados fuera de archivos locales;
 - CI con lint, tests, migraciones y build;

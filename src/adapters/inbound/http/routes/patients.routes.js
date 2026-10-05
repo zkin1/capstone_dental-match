@@ -5,10 +5,17 @@ const PatientRepository = require('../../../outbound/persistence/postgres/patien
 const MatchingRepository = require('../../../outbound/persistence/postgres/matching.repository');
 const PatientService = require('../../../../application/patients/patient.service');
 const { preCategorizar } = require('../../../outbound/ai/triage-agent.adapter');
-const { createMatchingService } = require('../../../../application/matching/matching.service');
+const {
+  createMatchingService,
+} = require('../../../../application/matching/matching.service');
 const { authenticateToken, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
+const CaseRepository = require('../../../outbound/persistence/postgres/case.repository');
+const {
+  CaseService,
+} = require('../../../../application/assignments/case.service');
+const cases = new CaseService(new CaseRepository(database));
 const service = new PatientService({
   repository: new PatientRepository(database),
   matching: createMatchingService(new MatchingRepository(database)),
@@ -44,15 +51,37 @@ router.get('/stats', ...staffOnly, async (req, res, next) => {
 
 router.post('/', ...staffOnly, async (req, res, next) => {
   try {
-    return res.status(201).json({ success: true, data: await service.create(req.body) });
+    return res
+      .status(201)
+      .json({ success: true, data: await service.create(req.body, req.user) });
   } catch (error) {
     return next(error);
   }
 });
 
+router.get('/:id', ...staffOnly, async (req, res, next) => {
+  try {
+    res.json({
+      success: true,
+      data: await cases.detail(req.params.id, req.user, false),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+router.put('/:id/precalificacion', ...staffOnly, async (req, res, next) => {
+  try {
+    res.json({
+      success: true,
+      data: await cases.qualify(req.params.id, req.body, req.user),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
 router.put('/:id', ...staffOnly, async (req, res, next) => {
   try {
-    await service.update(req.params.id, req.body);
+    await service.update(req.params.id, req.body, req.user);
     return res.json({ success: true });
   } catch (error) {
     return next(error);
@@ -61,7 +90,7 @@ router.put('/:id', ...staffOnly, async (req, res, next) => {
 
 router.delete('/:id', ...staffOnly, async (req, res, next) => {
   try {
-    await service.deactivate(req.params.id);
+    await service.deactivate(req.params.id, req.user);
     return res.json({
       success: true,
       message: 'Paciente desactivado y asignaciones canceladas',

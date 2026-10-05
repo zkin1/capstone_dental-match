@@ -6,4 +6,6 @@ module.exports = {
   matching: require('./matching.routes'),
   dashboard: require('./dashboard.routes'),
   notifications: require('./notifications.routes'),
+  referrals: require('./referrals.routes'),
+  users: require('./users.routes'),
 };

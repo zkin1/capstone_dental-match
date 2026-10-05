@@ -34,31 +34,49 @@ export default function Login() {
   return (
     <div className="login-screen">
       <aside className="login-context">
-        <Link to="/landing" className="public-brand" aria-label="Dental Matching, inicio">
-          <span className="public-brand-mark"><Icon name="tooth" size={19} /></span>
-          <span>Dental Matching</span>
+        <Link
+          to="/landing"
+          className="public-brand"
+          aria-label="Dental Match, inicio"
+        >
+          <span className="public-brand-mark">
+            <Icon name="tooth" size={19} />
+          </span>
+          <span>Dental Match</span>
         </Link>
         <div className="login-context-copy">
           <span className="login-context-line" />
           <h2>Todo lo que necesitas, en un solo lugar.</h2>
-          <p>Revisa pacientes, estudiantes y asignaciones desde un mismo lugar.</p>
+          <p>
+            Revisa pacientes, estudiantes y asignaciones desde un mismo lugar.
+          </p>
         </div>
-        <p className="login-context-note"><Icon name="check-circle" size={16} /> Atención supervisada y tus datos protegidos.</p>
+        <p className="login-context-note">
+          <Icon name="check-circle" size={16} /> Atención supervisada y tus
+          datos protegidos.
+        </p>
       </aside>
       <div className="login-card">
         <div className="login-header">
-          <div className="login-logo"><Icon name="tooth" size={34} /></div>
-          <h1>Dental Matching</h1>
+          <div className="login-logo">
+            <Icon name="tooth" size={34} />
+          </div>
+          <h1>Dental Match</h1>
           <p>Gestión de pacientes y estudiantes</p>
         </div>
         <form onSubmit={handleSubmit}>
-          {error && <div className="alert" role="alert"><Icon name="warning" size={18} />{error}</div>}
+          {error && (
+            <div className="alert" role="alert">
+              <Icon name="warning" size={18} />
+              {error}
+            </div>
+          )}
           <Input
             label="Email"
             type="email"
             value={email}
-            onChange={e => setEmail(e.target.value)}
-            placeholder="admin@dentalmatching.com"
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="admin@ejemplo.cl"
             required
             autoComplete="email"
           />
@@ -69,7 +87,7 @@ export default function Login() {
                 id="login-password"
                 type={showPassword ? 'text' : 'password'}
                 value={password}
-                onChange={e => setPassword(e.target.value)}
+                onChange={(e) => setPassword(e.target.value)}
                 placeholder="Tu contraseña"
                 required
                 autoComplete="current-password"
@@ -77,15 +95,22 @@ export default function Login() {
               <button
                 type="button"
                 className="input-icon-btn"
-                onClick={() => setShowPassword(v => !v)}
-                aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={
+                  showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'
+                }
                 aria-pressed={showPassword}
               >
                 <Icon name={showPassword ? 'eye-slash' : 'eye'} size={18} />
               </button>
             </div>
           </div>
-          <Button type="submit" loading={loading} icon="login" className="btn-block">
+          <Button
+            type="submit"
+            loading={loading}
+            icon="login"
+            className="btn-block"
+          >
             {loading ? 'Ingresando…' : 'Iniciar sesión'}
           </Button>
         </form>

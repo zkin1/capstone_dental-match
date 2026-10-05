@@ -9,10 +9,18 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     let active = true;
     apiFetch('/auth/validate-token')
-      .then(data => { if (active) setUser(data.data.user); })
-      .catch(() => { if (active) setUser(null); })
-      .finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
+      .then((data) => {
+        if (active) setUser(data.data.user);
+      })
+      .catch(() => {
+        if (active) setUser(null);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
   async function login(email, password) {
@@ -33,9 +41,28 @@ export function AuthProvider({ children }) {
       setUser(null);
     }
   }
+  async function refreshUser() {
+    try {
+      setUser(
+        (await apiFetch('/auth/validate-token', { skipRefresh: true })).data
+          .user
+      );
+    } catch {
+      setUser(null);
+    }
+  }
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isLoggedIn: Boolean(user), loading }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        login,
+        logout,
+        refreshUser,
+        isLoggedIn: Boolean(user),
+        loading,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

@@ -52,6 +52,8 @@ const STATUS_MAP: Record<string, StatusVariant> = {
   notificado: 'info', contactado: 'info', en_tratamiento: 'info',
   atendido: 'success', completado: 'success', completada: 'success', activo: 'success',
   cancelado: 'danger', cancelada: 'danger', abandono: 'danger', inactivo: 'danger',
+  derivacion_pendiente: 'warning', derivado: 'success', aprobada: 'success', rechazada: 'danger',
+  enviando: 'warning', enviado: 'success', fallido: 'danger',
 };
 
 export function statusVariant(value: string | null | undefined): StatusVariant {

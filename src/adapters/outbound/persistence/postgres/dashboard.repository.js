@@ -9,18 +9,18 @@ class DashboardRepository {
       db.query(
         `SELECT COUNT(*) AS total,
                 COUNT(*) FILTER (WHERE estado = 'pendiente') AS pendientes
-           FROM pacientes WHERE activo = TRUE`,
+           FROM pacientes WHERE activo = TRUE`
       ),
       db.query(
         `SELECT COUNT(*) AS total,
                 COUNT(*) FILTER (WHERE estado = 'activo') AS activos
-           FROM estudiantes_odontologia`,
+           FROM estudiantes_odontologia`
       ),
       db.query(
         `SELECT COUNT(*) AS total,
-                COUNT(*) FILTER (WHERE estado NOT IN ('completado', 'cancelado')) AS activas,
+                COUNT(*) FILTER (WHERE estado NOT IN ('completado', 'cancelado', 'derivado')) AS activas,
                 AVG(score_compatibilidad) AS score_promedio
-           FROM asignaciones`,
+           FROM asignaciones`
       ),
     ]);
 
@@ -30,7 +30,9 @@ class DashboardRepository {
       estudiantes: Number(students.rows[0].activos) || 0,
       asignaciones: Number(assignments.rows[0].total) || 0,
       asignacionesActivas: Number(assignments.rows[0].activas) || 0,
-      scorePromedio: Math.round((Number(assignments.rows[0].score_promedio) || 0) * 100),
+      scorePromedio: Math.round(
+        (Number(assignments.rows[0].score_promedio) || 0) * 100
+      ),
     };
   }
 }

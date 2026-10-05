@@ -28,7 +28,9 @@ const category = { specialty: 'Endodoncia', priority: 'Alta', pain: 7 };
 
 describe('matching determinista ponderado', () => {
   test('los pesos suman exactamente 100%', () => {
-    expect(Object.values(WEIGHTS).reduce((sum, weight) => sum + weight, 0)).toBeCloseTo(1, 10);
+    expect(
+      Object.values(WEIGHTS).reduce((sum, weight) => sum + weight, 0)
+    ).toBeCloseTo(1, 10);
   });
 
   test('devuelve el mismo score para la misma entrada y expone sus factores', () => {
@@ -37,12 +39,24 @@ describe('matching determinista ponderado', () => {
     expect(first).toEqual(second);
     expect(first.score).toBeGreaterThan(0);
     expect(first.score).toBeLessThanOrEqual(1);
-    expect(first.factors).toEqual(expect.objectContaining({ horario: 0.8, especialidad: 1 }));
+    expect(first.factors).toEqual(
+      expect.objectContaining({ horario: 0.8, especialidad: 1 })
+    );
   });
 
   test('un horario compatible y una carga menor aumentan la puntuación', () => {
-    const available = calculateScore({}, { ...candidate, casos_activos: 0 }, category, 1).score;
-    const busy = calculateScore({}, { ...candidate, casos_activos: 9 }, category, 0.2).score;
+    const available = calculateScore(
+      {},
+      { ...candidate, casos_activos: 0 },
+      category,
+      1
+    ).score;
+    const busy = calculateScore(
+      {},
+      { ...candidate, casos_activos: 9 },
+      category,
+      0.2
+    ).score;
     expect(available).toBeGreaterThan(busy);
   });
 
@@ -64,7 +78,9 @@ describe('matching determinista ponderado', () => {
   });
 
   test('los menores se derivan a odontopediatría sin intervención del LLM', () => {
-    expect(scorePatientCategory({ edad: 10, respuestas_cuestionario: {} }).specialty).toBe('Odontopediatría');
+    expect(
+      scorePatientCategory({ edad: 10, respuestas_cuestionario: {} }).specialty
+    ).toBe('Odontopediatría');
   });
 
   test.each([
@@ -72,24 +88,44 @@ describe('matching determinista ponderado', () => {
     [{ tipo_dolor: 'Espontaneo' }, 'Endodoncia'],
     [{ hallazgo_visual: 'Diente roto o Fractura' }, 'Prótesis Fija'],
     [{ hallazgo_visual: 'Mancha u Hoyo' }, 'Operatoria Dental'],
-  ])('clasifica reglas clínicas sin usar un ranking de IA', (answers, specialty) => {
-    expect(scorePatientCategory({ edad: 30, respuestas_cuestionario: answers }).specialty).toBe(specialty);
-  });
+  ])(
+    'clasifica reglas clínicas sin usar un ranking de IA',
+    (answers, specialty) => {
+      expect(
+        scorePatientCategory({ edad: 30, respuestas_cuestionario: answers })
+          .specialty
+      ).toBe(specialty);
+    }
+  );
 
   test('calcula compatibilidad horaria desde preferencias explícitas', () => {
     const morningPatient = {
       dias_disponibles: ['lunes'],
       horario_preferencia: 'mañana',
     };
-    expect(calculateScore(morningPatient, candidate, category).factors.horario).toBe(1);
     expect(
-      calculateScore({ ...morningPatient, dias_disponibles: ['martes'] }, candidate, category).factors.horario,
+      calculateScore(morningPatient, candidate, category).factors.horario
+    ).toBe(1);
+    expect(
+      calculateScore(
+        { ...morningPatient, dias_disponibles: ['martes'] },
+        candidate,
+        category
+      ).factors.horario
     ).toBe(0);
     expect(
-      calculateScore({ ...morningPatient, horario_preferencia: 'tarde' }, candidate, category).factors.horario,
+      calculateScore(
+        { ...morningPatient, horario_preferencia: 'tarde' },
+        candidate,
+        category
+      ).factors.horario
     ).toBe(0.35);
     expect(
-      calculateScore({ ...morningPatient, horario_preferencia: 'flexible' }, candidate, category).factors.horario,
+      calculateScore(
+        { ...morningPatient, horario_preferencia: 'flexible' },
+        candidate,
+        category
+      ).factors.horario
     ).toBe(1);
   });
 
@@ -131,38 +167,47 @@ describe('transacción de matching', () => {
     database.transaction.mockImplementation((work) => work(connection));
   });
 
+  function queries({
+    exists = true,
+    candidates = [available],
+    load = 2,
+    occupied = 0,
+  } = {}) {
+    connection.query.mockImplementation(async (sql) => {
+      if (sql.includes('SELECT * FROM pacientes'))
+        return { rows: exists ? [patient] : [] };
+      if (sql.includes('SELECT * FROM asignaciones')) return { rows: [] };
+      if (sql.includes('JOIN users u')) return { rows: candidates };
+      if (sql.includes('COUNT(*) AS total'))
+        return {
+          rows: [{ total: sql.includes('fecha_cita') ? occupied : load }],
+        };
+      if (sql.includes('INSERT INTO asignaciones'))
+        return { rows: [{ id: 99 }], rowCount: 1 };
+      return { rows: [], rowCount: 1 };
+    });
+  }
   test('no crea nada si el paciente ya no está disponible', async () => {
-    connection.query.mockResolvedValueOnce({ rows: [] });
+    queries({ exists: false });
     await expect(matching.matchPatient(10)).resolves.toEqual({
       success: false,
       reason: 'Paciente no disponible para asignación',
     });
-    expect(connection.query).toHaveBeenCalledTimes(1);
+    expect(
+      connection.query.mock.calls.some(([sql]) =>
+        sql.includes('INSERT INTO asignaciones')
+      )
+    ).toBe(false);
   });
-
   test('mantiene pendiente un caso sin candidatos', async () => {
-    connection.query
-      .mockResolvedValueOnce({ rows: [patient] })
-      .mockResolvedValueOnce({ rowCount: 1, rows: [] })
-      .mockResolvedValueOnce({ rows: [] });
+    queries({ candidates: [] });
     await expect(matching.matchPatient(10)).resolves.toMatchObject({
       success: false,
       category: { specialty: 'Endodoncia' },
     });
   });
-
-  test('crea asignación, actualiza carga y encola avisos en una transacción', async () => {
-    connection.query
-      .mockResolvedValueOnce({ rows: [patient] })
-      .mockResolvedValueOnce({ rowCount: 1, rows: [] })
-      .mockResolvedValueOnce({ rows: [available] })
-      .mockResolvedValueOnce({ rows: [{ total: 0 }] })
-      .mockResolvedValueOnce({ rows: [{ id: 99 }], rowCount: 1 })
-      .mockResolvedValueOnce({ rowCount: 1, rows: [] })
-      .mockResolvedValueOnce({ rowCount: 1, rows: [] })
-      .mockResolvedValueOnce({ rowCount: 1, rows: [] })
-      .mockResolvedValueOnce({ rowCount: 1, rows: [] });
-
+  test('crea asignación, historial, carga y avisos dentro de una transacción', async () => {
+    queries();
     const result = await matching.matchPatient(10);
     expect(result).toMatchObject({
       success: true,
@@ -170,21 +215,30 @@ describe('transacción de matching', () => {
       estudiante: 'Estudiante Demo',
       especialidad: 'Endodoncia',
     });
-    expect(connection.query).toHaveBeenCalledTimes(9);
-    expect(connection.query.mock.calls[4][0]).toContain('INSERT INTO asignaciones');
-    expect(connection.query.mock.calls[7][0]).toContain('INSERT INTO notificaciones_email');
+    const statements = connection.query.mock.calls.map(([sql]) => sql);
+    expect(
+      statements.some((sql) => sql.includes('INSERT INTO historial_paciente'))
+    ).toBe(true);
+    expect(
+      statements.filter((sql) =>
+        sql.includes('INSERT INTO notificaciones_email')
+      )
+    ).toHaveLength(2);
   });
-
-  test('aborta si la capacidad cambia antes de incrementar la carga', async () => {
-    connection.query
-      .mockResolvedValueOnce({ rows: [patient] })
-      .mockResolvedValueOnce({ rowCount: 1, rows: [] })
-      .mockResolvedValueOnce({ rows: [available] })
-      .mockResolvedValueOnce({ rows: [{ total: 0 }] })
-      .mockResolvedValueOnce({ rows: [{ id: 99 }], rowCount: 1 })
-      .mockResolvedValueOnce({ rowCount: 1, rows: [] })
-      .mockResolvedValueOnce({ rowCount: 0, rows: [] });
-    await expect(matching.matchPatient(10)).rejects.toThrow('La capacidad del estudiante cambió');
+  test('descarta sobrecupo y horarios ocupados después de adquirir el bloqueo', async () => {
+    queries({ load: 10 });
+    await expect(matching.matchPatient(10)).resolves.toMatchObject({
+      success: false,
+    });
+    queries({ occupied: 1 });
+    await expect(matching.matchPatient(10)).resolves.toMatchObject({
+      success: false,
+    });
+    expect(
+      connection.query.mock.calls.some(([sql]) =>
+        sql.includes('INSERT INTO asignaciones')
+      )
+    ).toBe(false);
   });
 
   test('serializa ejecuciones masivas con un lock de base de datos', async () => {

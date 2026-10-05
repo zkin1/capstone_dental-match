@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/authContext';
 import Icon from './Icon';
+import { displayLabel } from '../lib/labels';
 
 // Layout v2: skip-link, sidebar con aria-expanded + Escape, foco al contenido
 // al cambiar de ruta (A11Y-06/09/10).
@@ -35,27 +36,39 @@ export default function Layout() {
   }
 
   const navItems = isStudent
-    ? [{ to: '/mis-asignaciones', icon: 'clipboard', label: 'Mis Asignaciones' }]
+    ? [
+        {
+          to: '/mis-asignaciones',
+          icon: 'clipboard',
+          label: 'Mis Asignaciones',
+        },
+      ]
     : [
         { to: '/', icon: 'chart', label: 'Dashboard', end: true },
         { to: '/patients', icon: 'users', label: 'Pacientes' },
         { to: '/students', icon: 'grad-cap', label: 'Estudiantes' },
         { to: '/matching', icon: 'chart', label: 'Matching' },
         { to: '/assignments', icon: 'link', label: 'Asignaciones' },
+        { to: '/referrals', icon: 'link', label: 'Derivaciones' },
         { to: '/notifications', icon: 'mail', label: 'Notificaciones' },
         { to: '/agent', icon: 'robot', label: 'Agente IA' },
+        ...(user?.role === 'admin'
+          ? [{ to: '/users', icon: 'users', label: 'Cuentas y roles' }]
+          : []),
       ];
 
   const initials = (user?.nombre_completo || user?.nombre || 'U')
     .split(' ')
-    .map(s => s[0])
+    .map((s) => s[0])
     .slice(0, 2)
     .join('')
     .toUpperCase();
 
   return (
     <div className="app-layout">
-      <a href="#main" className="skip-link">Saltar al contenido principal</a>
+      <a href="#main" className="skip-link">
+        Saltar al contenido principal
+      </a>
 
       <button
         type="button"
@@ -68,26 +81,43 @@ export default function Layout() {
         <Icon name="menu" size={20} />
       </button>
 
-      {sidebarOpen && <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} aria-hidden="true" />}
+      {sidebarOpen && (
+        <div
+          className="sidebar-overlay"
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
 
-      <aside className={`sidebar${sidebarOpen ? ' open' : ''}`} id="sidebar" aria-label="Navegación principal">
+      <aside
+        className={`sidebar${sidebarOpen ? ' open' : ''}`}
+        id="sidebar"
+        aria-label="Navegación principal"
+      >
         <div className="sidebar-header">
           <div className="logo">
             <Icon name="tooth" size={22} />
-            <span>Dental Matching</span>
+            <span>Dental Match</span>
           </div>
-          <button type="button" className="sidebar-close" onClick={() => setSidebarOpen(false)} aria-label="Cerrar menú">
+          <button
+            type="button"
+            className="sidebar-close"
+            onClick={() => setSidebarOpen(false)}
+            aria-label="Cerrar menú"
+          >
             <Icon name="close" size={20} />
           </button>
         </div>
 
         <nav className="sidebar-nav">
-          {navItems.map(item => (
+          {navItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
               end={item.end}
-              className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
+              className={({ isActive }) =>
+                `nav-item${isActive ? ' active' : ''}`
+              }
               onClick={() => setSidebarOpen(false)}
             >
               <Icon name={item.icon} size={17} />
@@ -98,10 +128,16 @@ export default function Layout() {
 
         <div className="sidebar-footer">
           <div className="user-profile">
-            <div className="user-avatar" aria-hidden="true">{initials}</div>
+            <div className="user-avatar" aria-hidden="true">
+              {initials}
+            </div>
             <div className="user-info">
-              <div className="user-name">{user?.nombre_completo || user?.nombre || 'Usuario'}</div>
-              <div className="user-role">{user?.role || 'Sistema'}</div>
+              <div className="user-name">
+                {user?.nombre_completo || user?.nombre || 'Usuario'}
+              </div>
+              <div className="user-role">
+                {displayLabel(user?.role) || 'Sistema'}
+              </div>
             </div>
           </div>
           <button type="button" className="btn-logout" onClick={handleLogout}>
