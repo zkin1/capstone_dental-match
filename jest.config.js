@@ -24,7 +24,7 @@ module.exports = {
     '!tests/**/*.js',
     '!**/node_modules/**'
   ],
-  coverageReporters: ['text', 'text-summary', 'html', 'lcov'],
+  coverageReporters: ['text', 'text-summary', 'html', 'lcov', 'json-summary'],
   coverageThreshold: {
     global: {
       branches: 80,

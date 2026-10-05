@@ -859,4 +859,56 @@ run("seguimiento con PostgreSQL real", () => {
       global.fetch = original;
     }
   });
+
+  const studentInput = (email) => ({
+    nombre_completo: "Estudiante creado por personal", email,
+    password: "DentalTest!2026", confirmPassword: "DentalTest!2026",
+    ciudad: "Metropolitana", año_carrera: "5to", casos_necesarios: 3,
+    especialidades: ["Endodoncia", "Operatoria Dental"],
+    horarios_disponibles: [{ dia: "lunes", hora_inicio: "08:00", hora_fin: "12:00" }],
+    role: "admin", // The client cannot escalate the account being created.
+  });
+  test("personal crea perfil, horarios y cuenta student; puede entrar, editar y desactivar", async () => {
+    for (const actor of [admin, { ...admin, role: "coordinator", email: "newcoord@example.com" }]) {
+      let user = actor;
+      if (actor.role === "coordinator") {
+        user = (await pool.query("INSERT INTO users(email,password,nombre_completo,role) VALUES ($1,'hash','Coordinador','coordinator') RETURNING *", [actor.email])).rows[0];
+      }
+      const email = `managed-${user.role}@example.com`;
+      const created = await request(app).post("/api/estudiantes")
+        .set("Authorization", `Bearer ${generateToken(user)}`).send(studentInput(email));
+      expect(created.status).toBe(201);
+      const id = created.body.data.id;
+      const saved = (await pool.query("SELECT * FROM users WHERE email=$1", [email])).rows[0];
+      expect(saved.role).toBe("student");
+      expect(saved.password).not.toBe("DentalTest!2026");
+      expect((await pool.query("SELECT * FROM especialidades_estudiante WHERE id_estudiante=$1", [id])).rows).toHaveLength(2);
+      const login = await request(app).post("/api/auth/login").send({ email, password: "DentalTest!2026" });
+      expect(login.status).toBe(200);
+      expect(login.headers["set-cookie"].join(";")).toContain("HttpOnly");
+      expect(login.body.data.user.role).toBe("student");
+      expect((await request(app).put(`/api/estudiantes/${id}`).set("Authorization", `Bearer ${generateToken(user)}`).send({ nombre_completo: "Nombre actualizado" })).status).toBe(200);
+      expect((await request(app).delete(`/api/estudiantes/${id}`).set("Authorization", `Bearer ${generateToken(user)}`)).status).toBe(200);
+      expect((await request(app).post("/api/auth/login").send({ email, password: "DentalTest!2026" })).status).toBe(401);
+    }
+  });
+  test("crear estudiante exige personal; rechaza duplicados y entradas inválidas sin registros parciales", async () => {
+    const input = studentInput("managed-admin@example.com");
+    expect((await request(app).post("/api/estudiantes").send(input)).status).toBe(401);
+    expect((await request(app).post("/api/estudiantes").set("Authorization", `Bearer ${generateToken(student1.user)}`).send(input)).status).toBe(403);
+    expect((await request(app).post("/api/estudiantes").set("Authorization", `Bearer ${generateToken(admin)}`).send(input)).status).toBe(409);
+    for (const change of [
+      { password: "weak" }, { confirmPassword: "Different!2026" },
+      { especialidades: [] }, { especialidades: ["Invalid"] },
+      { horarios_disponibles: [{ dia: "lunes", hora_inicio: "99:00", hora_fin: "99:59" }] },
+      { nombre_completo: {} }, { casos_necesarios: "invalid" },
+      { email: "student@example.test" },
+      { password: "Aa1!" + "á".repeat(40), confirmPassword: "Aa1!" + "á".repeat(40) },
+    ]) {
+      const invalid = { ...studentInput("invalid@example.com"), ...change };
+      expect((await request(app).post("/api/estudiantes").set("Authorization", `Bearer ${generateToken(admin)}`).send(invalid)).status).toBe(400);
+    }
+    expect((await pool.query("SELECT * FROM users WHERE email='invalid@example.com'")).rows).toHaveLength(0);
+    expect((await pool.query("SELECT * FROM estudiantes_odontologia WHERE email='invalid@example.com'")).rows).toHaveLength(0);
+  });
 });

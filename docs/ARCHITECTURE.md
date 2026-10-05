@@ -1,6 +1,6 @@
 # Arquitectura del proyecto
 
-Dental Matching usa un monolito modular con arquitectura hexagonal. La decisión es intencional: el matching necesita transacciones consistentes con MySQL y el proyecto todavía no necesita la complejidad operativa de varios servicios.
+Dental Match usa un monolito modular con arquitectura hexagonal. El matching, la capacidad y las derivaciones se mantienen consistentes mediante transacciones y bloqueos de PostgreSQL.
 
 ## Mapa de la raíz
 
@@ -40,7 +40,8 @@ src/
 │   │   └── routes/
 │   └── outbound/
 │       ├── ai/
-│       ├── persistence/mysql/
+│       ├── email/
+│       ├── persistence/postgres/
 │       └── security/
 ├── infrastructure/
 │   ├── database/
@@ -52,10 +53,10 @@ src/
 
 ### Responsabilidades
 
-- `domain`: reglas puras del negocio. No importa Express, MySQL, `fetch` ni variables de entorno.
+- `domain`: reglas puras del negocio. No importa Express, PostgreSQL, `fetch` ni variables de entorno.
 - `application`: casos de uso y coordinación de reglas. Debe depender de puertos, no de detalles de infraestructura.
 - `adapters/inbound`: convierte HTTP en comandos de aplicación y resultados de aplicación en respuestas HTTP.
-- `adapters/outbound`: implementa los puertos para MySQL, IA, correo u otros servicios externos.
+- `adapters/outbound`: implementa los puertos para PostgreSQL, IA, correo u otros servicios externos.
 - `infrastructure`: composición de dependencias, conexión de base de datos, migraciones y arranque HTTP.
 - `shared`: errores y utilidades verdaderamente transversales; no debe convertirse en un cajón de sastre.
 
@@ -68,17 +69,25 @@ Application use case
         ↓
 Domain rules + ports
         ↓
-Outbound adapters (MySQL, IA, email)
+Outbound adapters (PostgreSQL, IA, email)
 ```
 
-Las rutas no deben contener SQL, reglas de matching, llamadas directas al LLM ni transacciones de negocio. Las consultas viven en repositorios/adaptadores MySQL y los casos de uso coordinan validaciones, reglas y efectos.
+Las rutas no deben contener SQL, reglas de matching, llamadas directas al LLM ni transacciones de negocio. Las consultas viven en `src/adapters/outbound/persistence/postgres/` y los casos de uso coordinan validaciones, reglas y efectos.
 
 ## Decisiones de negocio
 
 - La IA solo pre-categoriza y siempre tiene fallback determinista.
 - El matching es una regla de dominio explicable y no depende de un LLM.
-- MySQL sigue siendo la fuente de verdad para capacidad, estados y asignaciones.
+- PostgreSQL es la fuente de verdad para capacidad, estados, asignaciones, historial y derivaciones.
 - Las notificaciones se escriben primero en el outbox; un worker separado debe enviarlas y reintentarlas.
+
+## Persistencia y migraciones
+
+`src/infrastructure/database/connection.js` usa el pool de `pg`. Acepta `DATABASE_URL` o las variables `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD` y `DB_NAME`. `DB_SCHEMA` selecciona el esquema (por defecto `dental_match`) mediante `search_path`; las fechas se guardan en UTC y las citas se interpretan en la zona local chilena.
+
+`npm run migrate` aplica las migraciones versionadas y registra versión y checksum en `schema_migrations`; `npm run migrate:status` muestra las pendientes. Las migraciones actuales crean la base PostgreSQL y agregan seguimiento, historial y derivaciones. Para pruebas se crea un esquema temporal local que se elimina al terminar; CI utiliza una instancia PostgreSQL de prueba.
+
+La transacción de asignación bloquea el paciente y los cupos antes de actualizar la carga y encolar avisos. Las revisiones de derivación también se realizan dentro de una transacción: aprobar libera el cupo de origen una sola vez y busca un receptor compatible. El script de importación desde MySQL es una herramienta de migración histórica; el runtime usa PostgreSQL.
 
 ## Regla para cambios nuevos
 
@@ -93,6 +102,6 @@ Si un archivo necesita conocer simultáneamente Express, SQL y una regla clínic
 
 ## Estado de la refactorización
 
-La estructura física y los tres flujos principales ya están separados: `patients.routes.js`, `students.routes.js` y `assignments.routes.js` solo traducen HTTP y delegan en casos de uso. Sus consultas viven en repositorios MySQL y sus validaciones/transiciones en dominio o aplicación.
+La estructura física y los tres flujos principales ya están separados: `patients.routes.js`, `students.routes.js` y `assignments.routes.js` solo traducen HTTP y delegan en casos de uso. Sus consultas viven en repositorios PostgreSQL y sus validaciones/transiciones en dominio o aplicación.
 
-El siguiente paso para una hexagonal todavía más estricta es centralizar toda la composición de dependencias en un único contenedor de infraestructura. Los repositorios MySQL, incluido `matching.repository.js`, ya están fuera de los casos de uso; este último ajuste mejora organización y testabilidad, pero no es necesario para la demo actual.
+Los repositorios PostgreSQL, incluido `matching.repository.js`, están fuera de los casos de uso. Las rutas componen los servicios existentes; centralizar esa composición es una mejora opcional de organización.

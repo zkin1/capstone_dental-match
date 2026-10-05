@@ -2,6 +2,10 @@
 
 El seguimiento, las derivaciones revisadas, el reparto por carga y derivaciones aprobadas, la gestión de cuentas y el envío de correo se incorporaron en Capstone. Consulta [flujo, activación y evidencias](docs/SEGUIMIENTO_DERIVACIONES.md) y [plan previo](docs/PLAN_SEGUIMIENTO_DERIVACIONES.md).
 
+El alta de estudiante desde el panel del personal, las pruebas de sistema/navegador y el pipeline de CI están descritos en [pruebas y CI](docs/PRUEBAS_Y_CI.md).
+
+El [recorrido exploratorio local por un agente](docs/E2E_EXPLORATORIO_LOCAL.md) registra las acciones en pantalla, resultados, capturas y observaciones de uso.
+
 Demo de asignación de pacientes odontológicos a estudiantes de odontología clínica. El sistema recibe el caso del paciente, obtiene una pre-categorización opcional y asigna el caso mediante reglas deterministas de negocio. La inteligencia artificial no decide el matching.
 
 Este documento es la fuente única de verdad del proyecto: describe la arquitectura, el flujo funcional, las reglas, la base de datos, la seguridad, el frontend, los comandos y las limitaciones conocidas.
@@ -528,7 +532,7 @@ La demo ya tiene el flujo funcional, pero antes de producción hay que completar
 - configurar el proveedor de correo Resend y operar el trabajador implementado (ver guía de seguimiento);
 - backup y prueba de restauración de PostgreSQL;
 - secretos gestionados fuera de archivos locales;
-- CI con lint, tests, migraciones y build;
+- publicar el CI creado y exigir el check `quality` antes de integrar cambios;
 - observabilidad con logs estructurados, métricas y alertas;
 - política de retención y anonimización de datos personales;
 - pruebas de carga y concurrencia con datos representativos;

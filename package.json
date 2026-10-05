@@ -13,6 +13,8 @@
     "test:unit": "jest --testPathPattern=unit",
     "test:integration": "jest --testPathPattern=integration",
     "test:postgres": "jest --runInBand tests/integration/postgres-followup.test.js",
+    "test:system": "node scripts/test-system.js",
+    "test:browser": "node scripts/test-browser.js",
     "test:ai-agent": "node scripts/check-ai-agent.js",
     "worker:email": "node scripts/email-worker.js",
     "lint": "eslint server.js src scripts --ext .js",
@@ -56,6 +58,7 @@
     "jest": "^29.7.0",
     "mysql2": "^3.24.4",
     "nodemon": "^3.1.10",
+    "playwright": "1.62.1",
     "prettier": "^3.2.4",
     "supertest": "^6.3.4"
   },

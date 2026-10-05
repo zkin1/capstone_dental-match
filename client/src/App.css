@@ -855,6 +855,8 @@ tbody tr:hover { background: #f4f8f7; }
 }
 /* Case detail keeps clinical context, actions and append-only history together. */
 .modal:has(.case-detail) { width: min(820px, 94vw); max-width: 820px; }
+.modal:has(.student-registration-form) { width: min(820px, 94vw); max-width: 820px; }
+.modal .student-registration-form { padding: 0; border: 0; box-shadow: none; }
 .case-section { padding: 18px 0; border-top: 1px solid var(--border, #e2e2e2); }
 .case-data { display: grid; grid-template-columns: minmax(130px, 1fr) 2fr; gap: 8px 16px; margin: 12px 0; }
 .case-data dt { font-weight: 600; }

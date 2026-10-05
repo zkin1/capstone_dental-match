@@ -37,6 +37,15 @@ router.post('/register', publicRegistrationLimit, async (req, res, next) => {
   }
 });
 
+router.post('/', ...staffOnly, async (req, res, next) => {
+  try {
+    const data = await service.register(req.body);
+    return res.status(201).json({ success: true, message: 'Estudiante creado', data });
+  } catch (error) {
+    return next(error);
+  }
+});
+
 router.get('/', ...staffOnly, async (req, res, next) => {
   try {
     const data = await service.list();

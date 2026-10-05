@@ -15,9 +15,9 @@ export default function Landing() {
         />
         <div className="landing-hero-tint" aria-hidden="true" />
         <nav className="landing-nav" aria-label="Navegación pública">
-          <Link to="/landing" className="landing-brand" aria-label="Dental Matching, inicio">
+          <Link to="/landing" className="landing-brand" aria-label="Dental Match, inicio">
             <span className="landing-brand-mark"><Icon name="tooth" size={21} /></span>
-            <span>Dental Matching</span>
+            <span>Dental Match</span>
           </Link>
           <div className="landing-nav-actions">
             <Link to="/login">Ya tengo una cuenta</Link>
@@ -96,7 +96,7 @@ export default function Landing() {
       </main>
 
       <footer className="landing-footer landing-footer-v2">
-        <div className="landing-footer-brand"><span className="landing-brand-mark"><Icon name="tooth" size={19} /></span> Dental Matching</div>
+        <div className="landing-footer-brand"><span className="landing-brand-mark"><Icon name="tooth" size={19} /></span> Dental Match</div>
         <p>¿Ya tienes cuenta? <Link to="/login">Inicia sesión aquí</Link></p>
       </footer>
     </div>
