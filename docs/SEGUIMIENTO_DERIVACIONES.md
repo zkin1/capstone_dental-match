@@ -110,3 +110,39 @@ Resultado final: **86 pruebas aprobadas**, incluidas **16 con PostgreSQL real**.
 La revisión de interfaz recorrió administrador → asignación manual → estudiante → contacto y nota → propuesta → administrador → aprobación → nuevo receptor, además de las pantallas de cuentas y notificaciones. Se comprobó el diálogo en una ventana estrecha y se corrigió su desplazamiento. Sin errores de consola durante la revisión final. Agent-browser no pudo iniciar Chrome en este entorno; se utilizó el navegador integrado.
 
 ![Historial de una derivación con datos sintéticos](evidencias/derivacion-historial-20261003.png)
+
+## Verificación de rutas de producción en Vercel
+
+Fecha: 5 de octubre de 2026. Los despliegues de frontend y API corresponden al repositorio Capstone, rama `main`, commit `5fcfffb`.
+
+La hipótesis inicial de que el frontend no llegaba a la API se descartó mediante solicitudes HTTP directas. El navegador de pruebas mostraba `ERR_BLOCKED_BY_CLIENT`, pero los dominios de producción respondieron sin sesión de Vercel ni mecanismos de bypass. Ese bloqueo de la herramienta no demuestra una falla de la aplicación.
+
+El proyecto `dental-match-web` ya tiene una regla manual activa en Vercel: `/api/:path*` se dirige a `https://dental-match-api.vercel.app/api/$1`. Esa configuración explica por qué producción funciona aunque `client/vercel.json` solo tuviera el fallback de la SPA.
+
+Se incorporó la ruta equivalente a `client/vercel.json`, antes de `/index.html`, para que la conexión quede respaldada en Git y pueda reproducirse al desplegar. El cliente conserva `/api` y las cookies del mismo sitio. No requiere una URL pública nueva en las variables del frontend ni cambios en CORS o en las cookies. La regla manual de Vercel tiene precedencia y ya apunta al mismo destino; no es necesario modificarla para publicar este cambio. [Rewrites de Vercel](https://vercel.com/docs/routing/rewrites).
+
+También se corrigió el cliente compartido: antes aceptaba HTML o JSON inválido con HTTP 200 como un objeto vacío. Ahora muestra: «No se pudo obtener una respuesta válida de Dental Match. Intenta nuevamente». Los mensajes JSON del backend y la renovación de sesión se conservan.
+
+Comprobaciones HTTP realizadas sobre la producción existente, antes de publicar esta corrección:
+
+| Consulta | Resultado |
+| --- | --- |
+| Web `/`, `/login` y `/landing` | HTTP 200, HTML de la SPA |
+| Web `/api` y `/api/info` | HTTP 200, JSON del backend |
+| Web y API `/api/health` | HTTP 200, PostgreSQL saludable |
+| Web `/api/auth/validate-token`, `/api/pacientes`, `/api/derivaciones` y `/api/users` sin sesión | HTTP 401, JSON |
+| Web `/api/__e2e_ruta_inexistente__` | HTTP 404, JSON |
+| Web `POST /api/auth/login` con `{}` | HTTP 400, `VALIDATION_ERROR` |
+| Web `POST /api/auth/refresh-token` con `{}` | HTTP 401, `AUTHENTICATION_ERROR` |
+| Agente IA `/health` | HTTP 200, estado `ok` |
+
+La validación local del cambio pasó: siete pruebas nuevas del cliente, doce pruebas existentes del contrato HTTP del backend, lint y build del cliente. Las pruebas detectaron tres fallos antes de la corrección: ruta API ausente del archivo y aceptación de HTML y JSON incompleto como éxito. Después de la corrección, las siete pasaron. Vite mantiene el aviso previo de un bundle mayor de 500 kB; la compilación finaliza correctamente.
+
+```powershell
+npm --prefix client test
+npm --prefix client run lint
+npm --prefix client run build
+npm test -- --runInBand tests/integration/api.test.js
+```
+
+Estas comprobaciones no crearon pacientes, no modificaron cuentas ni enviaron correos. El E2E de producción con sesiones de administrador y estudiante, operaciones de derivación y envío real de correo sigue pendiente. El cambio preparado para commit no necesita una migración de base de datos. Después del commit y push desde GitHub Desktop, comprobar el despliegue nuevo y ejecutar el E2E con acceso autorizado a las cuentas de prueba.
