@@ -21,7 +21,9 @@ async function apiFetch(path, options = {}) {
     if (refresh.ok) response = await request(path, { ...options, skipRefresh: true });
   }
 
-  const data = await response.json().catch(() => ({}));
+  const data = await response.json().catch(() => {
+    throw new Error('No se pudo obtener una respuesta válida de Dental Match. Intenta nuevamente.');
+  });
   if (!response.ok) {
     const message = data?.error?.message || data?.message || data?.error || 'Error en la solicitud';
     throw new Error(typeof message === 'string' ? message : 'Error en la solicitud');
