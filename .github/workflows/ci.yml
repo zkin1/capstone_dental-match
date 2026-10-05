@@ -1,0 +1,80 @@
+name: Dental Match CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: dental_ci
+          POSTGRES_PASSWORD: dental_ci_test_only
+          POSTGRES_DB: dental_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U dental_ci -d dental_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://dental_ci:dental_ci_test_only@127.0.0.1:5432/dental_ci
+      TEST_DATABASE_URL: postgresql://dental_ci:dental_ci_test_only@127.0.0.1:5432/dental_ci
+      DB_SCHEMA: dental_match_ci
+      DB_CONNECTION_LIMIT: 8
+      JWT_SECRET: ci-access-key-for-isolated-tests-only
+      JWT_REFRESH_SECRET: ci-refresh-key-for-isolated-tests-only
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            client/package-lock.json
+      - name: Install locked dependencies
+        run: |
+          npm ci
+          npm --prefix client ci
+      - name: Lint backend and frontend
+        run: |
+          npm run lint
+          npm --prefix client run lint
+      - name: Validate PostgreSQL migrations
+        run: |
+          npm run migrate
+          npm run migrate
+          npm run migrate:status
+      - name: Unit, integration and regression with coverage
+        run: |
+          npm run test:coverage -- --runInBand
+          npm --prefix client test
+      - name: Build frontend
+        run: npm --prefix client run build
+      - name: System, security, performance and stress
+        run: npm run test:system
+      - name: Install Chromium for browser checks
+        run: npx playwright install --with-deps chromium
+      - name: Browser regression and acceptance scenarios
+        run: npm run test:browser
+      - name: Audit production dependencies
+        run: |
+          npm audit --omit=dev
+          npm --prefix client audit --omit=dev

@@ -146,3 +146,10 @@ npm test -- --runInBand tests/integration/api.test.js
 ```
 
 Estas comprobaciones no crearon pacientes, no modificaron cuentas ni enviaron correos. El E2E de producción con sesiones de administrador y estudiante, operaciones de derivación y envío real de correo sigue pendiente. El cambio preparado para commit no necesita una migración de base de datos. Después del commit y push desde GitHub Desktop, comprobar el despliegue nuevo y ejecutar el E2E con acceso autorizado a las cuentas de prueba.
+
+
+## Verificación adicional — 5 de octubre de 2026
+
+El corte más reciente agrega el alta de estudiante desde el panel y CI. Se ejecutaron 89/89 pruebas Jest (19 PostgreSQL), siete pruebas del cliente, nueve escenarios de navegador y un flujo HTTP completo hasta completado. El E2E de navegador incluye crear/asignar al paciente, proponer/aprobar su derivación y completar el tratamiento desde la cuenta del receptor; historial y cupos comprobados en PostgreSQL. Rendimiento/estrés local y seguridad están documentados en [pruebas y CI](PRUEBAS_Y_CI.md), con resultados JSON y capturas. Este corte complementa las cifras históricas anteriores. UAT humana, piloto desplegado y primer run de GitHub quedan pendientes.
+
+El [recorrido exploratorio local](E2E_EXPLORATORIO_LOCAL.md) complementa las suites con navegación adaptativa de un agente por las pantallas del personal, estudiante y público, además de la vista móvil. Confirmó el cierre del caso, la persistencia del historial y el reintento de una derivación sin receptor al liberar capacidad. Se corrigió el nombre visible de la portada y el registro del paciente; quedan observaciones de claridad sobre cupos por horario y cancelación de asignaciones.

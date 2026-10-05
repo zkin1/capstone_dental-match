@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { useToast } from '../components/toastContext';
@@ -11,6 +10,7 @@ import Table from '../components/Table';
 import EmptyState from '../components/EmptyState';
 import Skeleton from '../components/Skeleton';
 import Modal from '../components/Modal';
+import StudentRegistrationForm from '../components/StudentRegistrationForm';
 
 const CITIES = ['Metropolitana', 'Valparaíso', 'Concepción'];
 
@@ -21,6 +21,7 @@ export default function Students() {
   const [error, setError] = useState('');
   const [viewing, setViewing] = useState(null);
   const [editing, setEditing] = useState(null);
+  const [creating, setCreating] = useState(false);
   const [saving, setSaving] = useState(false);
   const toast = useToast();
 
@@ -90,7 +91,7 @@ export default function Students() {
           <h1>Estudiantes</h1>
           <p className="page-subtitle">Perfiles, especialidades, disponibilidad y carga actual.</p>
         </div>
-        <Link to="/registro-estudiante" className="btn btn-primary"><Icon name="plus" size={17} /> Registrar estudiante</Link>
+        <Button icon="plus" onClick={() => setCreating(true)}>Crear estudiante</Button>
       </div>
 
       {error && <div className="alert" role="alert"><Icon name="warning" size={18} />{error}</div>}
@@ -105,6 +106,16 @@ export default function Students() {
           keyFn={student => student.id}
           empty={<EmptyState icon="grad-cap" title="No hay estudiantes registrados" description="Registra un estudiante con sus horarios para habilitar el matching." />}
         />
+      )}
+
+      {creating && (
+        <Modal open title="Crear estudiante" onClose={() => setCreating(false)}>
+          <StudentRegistrationForm staff onCreated={async student => {
+            setCreating(false);
+            toast.success(`Estudiante creado: ${student.codigo_estudiante}`);
+            await loadStudents();
+          }} />
+        </Modal>
       )}
 
       {viewing && (

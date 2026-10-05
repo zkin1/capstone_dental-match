@@ -1,0 +1,43 @@
+{
+  "cut": "2026-10-05",
+  "status": "passed",
+  "suites": 10,
+  "passed": 89,
+  "failed": 0,
+  "skipped": 0,
+  "unit": 58,
+  "integration": 31,
+  "postgres": 19,
+  "coverage": {
+    "lines": {
+      "total": 167,
+      "covered": 162,
+      "skipped": 0,
+      "pct": 97
+    },
+    "statements": {
+      "total": 192,
+      "covered": 180,
+      "skipped": 0,
+      "pct": 93.75
+    },
+    "functions": {
+      "total": 50,
+      "covered": 46,
+      "skipped": 0,
+      "pct": 92
+    },
+    "branches": {
+      "total": 148,
+      "covered": 131,
+      "skipped": 0,
+      "pct": 88.51
+    },
+    "branchesTrue": {
+      "total": 0,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 100
+    }
+  }
+}

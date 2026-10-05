@@ -52,6 +52,10 @@ describe('errores del BFF', () => {
     errorHandler(Object.assign(new SyntaxError('bad json'), { status: 400 }), {}, invalidJson);
     expect(invalidJson.status).toHaveBeenCalledWith(400);
 
+    const oversized = response();
+    errorHandler({ type: 'entity.too.large', status: 413 }, {}, oversized);
+    expect(oversized.status).toHaveBeenCalledWith(413);
+
     const external = response();
     errorHandler({ isOperational: true, statusCode: 422, message: 'fuera de rango' }, {}, external);
     expect(external.status).toHaveBeenCalledWith(422);

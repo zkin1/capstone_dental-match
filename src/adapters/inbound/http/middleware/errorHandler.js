@@ -10,6 +10,7 @@ function normalizeError(error) {
     return new DatabaseError();
   }
   if (error instanceof SyntaxError && error.status === 400) return new ValidationError('El cuerpo JSON no es válido');
+  if (error.type === 'entity.too.large') return new AppError('El cuerpo de la solicitud supera el límite de 1 MB', 413, 'PAYLOAD_TOO_LARGE');
   return new AppError(process.env.NODE_ENV === 'production' ? 'Error interno del servidor' : error.message);
 }
 

@@ -1,35 +1,54 @@
 const { CITIES, SPECIALTIES, normalizeSpecialty } = require('../common');
+const Joi = require('joi');
 
 const DAYS = Object.freeze(['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado']);
+const emailSchema = Joi.string().email().max(255).required();
 
 function validateStudent(input, publicRegistration = false) {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return 'Los datos del estudiante no son válidos';
+  const textLimits = { nombre_completo: 150, email: 255, telefono: 20, universidad: 150,
+    ciudad: 30, año_carrera: 3, password: 72, confirmPassword: 72 };
+  for (const [field, limit] of Object.entries(textLimits)) {
+    if (input[field] !== undefined && (typeof input[field] !== 'string' || input[field].length > limit)) {
+      return `El campo ${field} debe ser un texto de hasta ${limit} caracteres`;
+    }
+  }
   const required = ['nombre_completo', 'email', 'ciudad', 'año_carrera'];
   if (publicRegistration) required.push('password');
   if (required.some(field => !String(input[field] || '').trim())) {
     return 'Nombre, email, ciudad, año de carrera y contraseña son obligatorios';
   }
-  if (!/^\S+@\S+\.\S+$/.test(input.email)) return 'El email no es válido';
+  if (emailSchema.validate(input.email).error) return 'El email no es válido';
   if (!['4to', '5to'].includes(input.año_carrera)) return 'El año de carrera debe ser 4to o 5to';
   if (!CITIES.includes(input.ciudad)) return 'La ciudad no es válida';
   if (publicRegistration && !/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/.test(input.password)) {
     return 'La contraseña debe tener 8 caracteres, mayúscula, minúscula, número y símbolo';
   }
   if (publicRegistration && input.password !== input.confirmPassword) return 'Las contraseñas no coinciden';
+  if (publicRegistration && new TextEncoder().encode(input.password).length > 72) return 'La contraseña es demasiado larga; usa una más corta';
+  if (input.casos_necesarios !== undefined
+    && (!Number.isInteger(Number(input.casos_necesarios)) || Number(input.casos_necesarios) < 1 || Number(input.casos_necesarios) > 50)) {
+    return 'La carga máxima debe ser un entero entre 1 y 50';
+  }
   if (!Array.isArray(input.especialidades) || !input.especialidades.length) return 'Selecciona al menos una especialidad';
   if (!Array.isArray(input.horarios_disponibles) || !input.horarios_disponibles.length) {
     return 'Selecciona al menos un horario de atención';
   }
   const seenSchedules = new Set();
   for (const slot of input.horarios_disponibles) {
-    if (!DAYS.includes(slot.dia)
-      || !/^\d{2}:\d{2}$/.test(slot.hora_inicio || '')
-      || !/^\d{2}:\d{2}$/.test(slot.hora_fin || '')
+    if (!slot || !DAYS.includes(slot.dia)
+      || !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(slot.hora_inicio || '')
+      || !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(slot.hora_fin || '')
       || slot.hora_inicio >= slot.hora_fin) {
       return 'Cada horario debe tener un día válido y una hora de inicio anterior al término';
     }
     const key = `${slot.dia}|${slot.hora_inicio}|${slot.hora_fin}`;
     if (seenSchedules.has(key)) return 'No repitas el mismo horario de atención';
     seenSchedules.add(key);
+    if (slot.capacidad_pacientes !== undefined
+      && (!Number.isInteger(Number(slot.capacidad_pacientes)) || Number(slot.capacidad_pacientes) < 1 || Number(slot.capacidad_pacientes) > 50)) {
+      return 'La capacidad del horario debe ser un entero entre 1 y 50';
+    }
   }
   return null;
 }
@@ -50,7 +69,7 @@ function validateStaffUpdate(input) {
   }
   if (input.ciudad && !CITIES.includes(input.ciudad)) return { error: 'La ciudad no es válida' };
   if (input.estado && !['activo', 'inactivo'].includes(input.estado)) return { error: 'El estado no es válido' };
-  if (input.email && !/^\S+@\S+\.\S+$/.test(input.email)) return { error: 'El email no es válido' };
+  if (input.email !== undefined && emailSchema.validate(input.email).error) return { error: 'El email no es válido' };
 
   const changes = Object.fromEntries(entries.map(field => {
     if (field === 'email') return [field, input[field].toLowerCase()];

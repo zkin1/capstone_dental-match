@@ -11,9 +11,9 @@ import Chip from '../components/Chip';
 function RegistroAside() {
   return (
     <aside className="registro-aside">
-      <Link to="/landing" className="public-brand" aria-label="Dental Matching, inicio">
+      <Link to="/landing" className="public-brand" aria-label="Dental Match, inicio">
         <span className="public-brand-mark"><Icon name="tooth" size={18} /></span>
-        <span>Dental Matching</span>
+        <span>Dental Match</span>
       </Link>
       <div>
         <h2>Cuéntanos qué te pasa.</h2>
