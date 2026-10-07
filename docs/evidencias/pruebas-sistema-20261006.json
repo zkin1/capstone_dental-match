@@ -1,0 +1,40 @@
+{
+  "status": "passed",
+  "environment": "local synthetic PostgreSQL",
+  "checks": [
+    "Admin y coordinador crean estudiante con cuenta, especialidades y horarios; login con cookies HttpOnly",
+    "401 anónimo, 403 estudiante, 409 email duplicado, validación de contraseña y protección de rol",
+    "Intake con fallback → asignación → contacto → derivación → aprobación → tratamiento → completado; historial y cupos consistentes",
+    "Permisos de rutas, entrada SQL, JSON inválido, límite de body, cabeceras y ausencia de X-Powered-By",
+    "Rendimiento/estrés local: 380 lecturas con 100 pacientes, concurrencia 1/10/50, sin 5xx y recuperación saludable",
+    "Rate limit real: petición 501 devuelve 429",
+    "Logout invalida el refresh token"
+  ],
+  "metrics": [
+    {
+      "concurrency": 1,
+      "requests": 30,
+      "errors": 0,
+      "p95Ms": 22,
+      "maxMs": 62,
+      "requestsPerSecond": 100
+    },
+    {
+      "concurrency": 10,
+      "requests": 100,
+      "errors": 0,
+      "p95Ms": 90,
+      "maxMs": 217,
+      "requestsPerSecond": 171
+    },
+    {
+      "concurrency": 50,
+      "requests": 250,
+      "errors": 0,
+      "p95Ms": 388,
+      "maxMs": 488,
+      "requestsPerSecond": 200
+    }
+  ],
+  "cut": "2026-10-06"
+}

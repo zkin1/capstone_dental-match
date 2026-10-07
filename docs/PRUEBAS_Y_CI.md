@@ -27,7 +27,7 @@ Corte: 05-10-2026. Las pruebas usan PostgreSQL local y datos sintéticos en un e
 
 Se ejecutaron todas las categorías indicadas. Las siete categorías técnicas de la tabla tienen resultados aprobados en el alcance documentado. Los escenarios UAT también funcionaron al ser recorridos por el agente, pero la **aceptación del usuario** sigue pendiente: Carlos Avello debe registrar si acepta los casos, con fecha y observaciones. Por eso aún no se declara completa la aprobación UAT.
 
-El backlog registra **30 historias completadas y seis en progreso**. DMC-031 y el piloto técnico local de DMC-036 están completados; el CI de DMC-034 ya está implementado, pero necesita su primera ejecución remota y el check obligatorio para cumplir el objetivo de bloquear merges incorrectos. Las pruebas locales no confirman el envío real de correo, el análisis con proveedor IA ni la capacidad en producción.
+El backlog registra **30 historias completadas y seis en progreso**. DMC-031 y el piloto técnico local de DMC-036 están completados; el CI de DMC-034 ya está implementado, pero necesita su primera ejecución remota aprobada y el check obligatorio para cumplir el objetivo de bloquear merges incorrectos. Las pruebas locales no confirman el envío real de correo, el análisis con proveedor IA ni la capacidad en producción.
 
 La cobertura configurada mide el núcleo seleccionado en `jest.config.js`, con umbral global de 80%; no representa la totalidad del repositorio. El rendimiento es una medición acotada de este PC y de consultas de lectura; no demuestra la capacidad máxima ni el comportamiento en producción. La seguridad comprobada corresponde a los casos de la tabla y a los avisos de dependencias conocidos en este corte.
 
@@ -48,6 +48,14 @@ Evidencias: [Jest y cobertura](evidencias/pruebas-jest-20261005.json), [sistema/
 La última ejecución E2E recorrió el caso clínico mediante clics y formularios: administrador crea y asigna al paciente, estudiante consulta contacto y registra derivación, administrador aprueba y receptor contacta, inicia y completa el tratamiento. Se comprobaron las respuestas HTTP, las notas del historial y los estados finales `derivado` y `completado` en PostgreSQL, con los cupos liberados. Se usaron cuentas y pacientes ficticios en un esquema temporal local. No hubo errores JavaScript durante los nueve escenarios.
 
 Además, a petición del usuario un agente realizó un [recorrido exploratorio interactivo](E2E_EXPLORATORIO_LOCAL.md) en el navegador integrado, decidiendo los pasos a partir de cada pantalla. Recorrió administrador, coordinador, estudiante, registro público y vista móvil, con recargas para comprobar persistencia. El caso clínico terminó en completado; se probaron la falta de receptor y el reintento después de liberar un horario. Se corrigió el nombre visible de la portada y el registro de pacientes a Dental Match y se volvió a comprobar en pantalla. Quedan dos observaciones de claridad: diferenciar cupo total de cupo por horario y explicar que cancelar una asignación devuelve el paciente a pendiente. El envío real de correo sigue fuera del alcance del entorno sin proveedor.
+
+### Revalidación local — 06-10-2026
+
+Al contrastar los requisitos de la profesora, se reejecutaron las suites en Capstone: **89/89 Jest** (58 unitarias, 31 de integración, incluidas 19 PostgreSQL), **7/7 del cliente**, build y **9/9 escenarios de navegador**, sin pruebas omitidas. Sistema, seguridad y carga también terminaron con `status: passed`. Los datos sintéticos se eliminaron junto con los esquemas temporales al finalizar.
+
+La cobertura de esta ejecución fue 93.75% statements, 87.16% branches, 92% functions y 97% lines en el núcleo seleccionado. Las cargas de concurrencia 1/10/50 dieron p95 de 22/90/388 ms, cero errores y health posterior correcto. Estas cifras corresponden a esta ejecución; los resultados del 05-10-2026 se conservan como evidencia histórica. La auditoría de dependencias no se reejecutó en este corte.
+
+Evidencias nuevas: [resultado Jest completo](evidencias/pruebas-jest-20261006-raw.json), [resumen y cobertura](evidencias/pruebas-jest-20261006.json), [sistema/seguridad/carga](evidencias/pruebas-sistema-20261006.json) y [navegador](evidencias/pruebas-navegador-20261006.json). La [evaluación de cumplimiento y guía de demostración](EVALUACION_2_PRUEBAS_Y_DEMOSTRACION.md) explica cómo presentar las categorías, acreditar el avance con el backlog y registrar la UAT humana, que continúa pendiente.
 
 ## Aceptación del usuario
 
@@ -89,7 +97,15 @@ Las pruebas PostgreSQL de Jest se omiten si falta `TEST_DATABASE_URL`. Los coman
 
 El workflow crea el check **quality**. Se apoya en las acciones oficiales [checkout](https://github.com/actions/checkout) y [setup-node](https://github.com/actions/setup-node), usa permisos de lectura y no necesita credenciales de producción.
 
-Después de publicar este commit, comprobar la primera ejecución en GitHub → Actions. En Settings → Rules → Rulesets (o Branches), proteger la rama de integración, exigir pull request y añadir el check `quality` como requisito. La existencia del workflow por sí sola no obliga a esperar el resultado; esa regla de GitHub completa el bloqueo de merges. Esta configuración remota y la primera ejecución quedan pendientes hasta publicar el commit.
+El commit `27de6e5` ya está publicado y generó una primera ejecución, que terminó sin obtener un runner (ver actualización siguiente). Obtener una ejecución aprobada en GitHub → Actions. En Settings → Rules → Rulesets (o Branches), proteger la rama de integración, exigir pull request y añadir el check `quality` como requisito. La existencia del workflow por sí sola no obliga a esperar el resultado; esa regla de GitHub completa el bloqueo de merges. La primera ejecución aprobada y la verificación de esta configuración remota siguen pendientes.
+
+### Actualización del CI remoto — 06-10-2026
+
+La [ejecución 37364619478](https://github.com/zkin1/capstone_dental-match/actions/runs/37364619478), iniciada el 05-10-2026 por el push de `27de6e5`, terminó con estado global `failure` después de 15 minutos y 3 segundos. La API confirmó que el job `quality` quedó `cancelled` y tiene una lista de pasos vacía (`steps: []`). No se ejecutaron checkout, instalación, lint, migraciones ni pruebas; este resultado no permite evaluar el código.
+
+La [captura del fallo](evidencias/fallo-ci-runner-20261006.png) muestra que GitHub no logró asignar un runner hospedado tras varios intentos y reportó un error interno. El diagnóstico corresponde a la provisión del runner. El aviso sobre la [migración de `ubuntu-latest` a Ubuntu 26.04](https://github.blog/changelog/2026-09-17-ubuntu-26-generally-available-and-latest-migration/) es informativo: esa transición comienza el 19-10-2026 y no explica este fallo anterior al inicio de los pasos.
+
+Se intentó reejecutar el workflow el 06-10-2026. GitHub rechazó la operación: la cuenta de la CLI solo tiene permiso de lectura y la integración conectada respondió `403 Resource not accessible by integration`. No se inició un nuevo intento. El siguiente paso es abrir la ejecución con una cuenta autorizada y seleccionar **Re-run all jobs**; GitHub exige [permiso de escritura para reejecutar workflows](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/re-run-workflows-and-jobs). Se conserva el workflow y DMC-034 continúa pendiente de una ejecución aprobada y del check obligatorio.
 
 CI valida las migraciones en su base temporal y comprueba que una segunda ejecución no agrega cambios. El despliegue de Vercel continúa con el flujo existente del proyecto; las migraciones de producción se gestionan por separado.
 

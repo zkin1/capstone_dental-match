@@ -1,0 +1,44 @@
+{
+  "cut": "2026-10-06",
+  "status": "passed",
+  "suites": 10,
+  "passed": 89,
+  "failed": 0,
+  "skipped": 0,
+  "unit": 58,
+  "integration": 31,
+  "postgres": 19,
+  "coverage": {
+    "lines": {
+      "total": 167,
+      "covered": 162,
+      "skipped": 0,
+      "pct": 97
+    },
+    "statements": {
+      "total": 192,
+      "covered": 180,
+      "skipped": 0,
+      "pct": 93.75
+    },
+    "functions": {
+      "total": 50,
+      "covered": 46,
+      "skipped": 0,
+      "pct": 92
+    },
+    "branches": {
+      "total": 148,
+      "covered": 129,
+      "skipped": 0,
+      "pct": 87.16
+    },
+    "branchesTrue": {
+      "total": 0,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 100
+    }
+  },
+  "raw": "pruebas-jest-20261006-raw.json"
+}
