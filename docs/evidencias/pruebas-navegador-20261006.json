@@ -1,0 +1,17 @@
+{
+  "status": "passed",
+  "environment": "local Chromium + PostgreSQL synthetic",
+  "checks": [
+    "Admin abre formulario y recibe validación visible cuando no coinciden contraseñas",
+    "Admin crea estudiante dentro del panel; modal cierra, lista se actualiza y la sesión se conserva",
+    "Email duplicado muestra error; Escape cierra el diálogo",
+    "Cuenta creada puede entrar como estudiante y no accede al panel del personal",
+    "Edición y desactivación funcionan; cuenta desactivada no inicia sesión",
+    "Coordinador también crea estudiantes desde su panel",
+    "Regresión: registro público conserva confirmación y código del estudiante",
+    "Formulario visible a 390 px, sin desbordamiento horizontal ni errores JavaScript",
+    "E2E clínico completo por interfaz: admin crea/asigna paciente → estudiante revisa contacto y deriva → admin aprueba → receptor contacta, trata y completa; historial y cupos confirmados en PostgreSQL"
+  ],
+  "uat": "Escenarios simulados; pendiente aceptación humana",
+  "cut": "2026-10-06"
+}
