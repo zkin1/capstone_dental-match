@@ -1172,3 +1172,49 @@ if ($current.Contains('Tarjetas para pacientes y estudiantes')) {
     padding: 8px;
   }
 }
+/* Logo de la landing */
+.landing-v2 .landing-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 14px 7px 8px;
+  border-radius: 12px;
+  background: #f3f0e8;
+  color: #102a43;
+  font-size: 1rem;
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: 0 4px 14px rgba(8, 25, 42, .12);
+}
+
+.landing-v2 .landing-brand-mark {
+  display: inline-flex;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 8px;
+  background: #102a43;
+  color: #8edbd0;
+}
+
+.landing-v2 .landing-brand:hover {
+  background: #fffdf8;
+  transform: translateY(-1px);
+}
+
+@media (max-width: 640px) {
+  .landing-v2 .landing-brand {
+    gap: 8px;
+    padding-right: 10px;
+    font-size: .9rem;
+  }
+
+  .landing-v2 .landing-brand-mark {
+    width: 32px;
+    height: 32px;
+    flex-basis: 32px;
+  }
+}
