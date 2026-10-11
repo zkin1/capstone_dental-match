@@ -939,3 +939,33 @@ tbody tr:hover { background: #f4f8f7; }
     font-size: .72rem;
   }
 }
+/* Círculos para los números de los pasos */
+.landing-v2 .process-item {
+  align-items: center;
+}
+
+.landing-v2 .process-number {
+  display: grid;
+  place-items: center;
+  width: 84px;
+  height: 84px;
+  border: 1px solid var(--dm-teal-500);
+  border-radius: 50%;
+  background: var(--dm-teal-100);
+  color: var(--dm-danger-solid);
+  font: 700 1.7rem var(--dm-font-display);
+  line-height: 1;
+}
+
+@media (max-width: 640px) {
+  .landing-v2 .process-item {
+    grid-template-columns: 72px minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .landing-v2 .process-number {
+    width: 64px;
+    height: 64px;
+    font-size: 1.3rem;
+  }
+}
