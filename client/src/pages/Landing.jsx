@@ -20,8 +20,13 @@ export default function Landing() {
             <span>Dental Match</span>
           </Link>
           <div className="landing-nav-actions">
-            <Link to="/login">Ya tengo una cuenta</Link>
-            <Link to="/registro-paciente" className="landing-nav-cta">Contar mi caso <Icon name="arrow-left" size={15} style={{ transform: 'rotate(180deg)' }} /></Link>
+                <Link to="/login" className="landing-nav-button landing-nav-login">
+              Ya tengo una cuenta
+            </Link>
+            <Link to="/registro-paciente" className="landing-nav-button landing-nav-cta">
+              Contar mi caso
+              <Icon name="arrow-left" size={15} style={{ transform: 'rotate(180deg)' }} />
+            </Link>
           </div>
         </nav>
 

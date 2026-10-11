@@ -588,6 +588,12 @@ tbody tr:hover { background: var(--dm-surface-sunken); }
 .landing-v2 .landing-nav-actions { display: flex; align-items: center; gap: 24px; white-space: nowrap; }
 .landing-v2 .landing-nav-actions a { color: #f6f8f5; }
 .landing-nav-cta { display: inline-flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--dm-teal-500); padding-bottom: 5px; }
+.landing-v2 .landing-nav-actions .landing-nav-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 11px 16px; border: 1px solid rgba(255, 255, 255, .8); border-radius: 999px; color: #fff; font-weight: 700; text-decoration: none; transition: background .2s ease, border-color .2s ease, transform .2s ease; }
+.landing-v2 .landing-nav-actions .landing-nav-login { background: rgba(8, 25, 42, .3); }
+.landing-v2 .landing-nav-actions .landing-nav-login:hover { background: rgba(255, 255, 255, .14); }
+.landing-v2 .landing-nav-actions .landing-nav-cta { border-color: var(--dm-action); background: var(--dm-action); }
+.landing-v2 .landing-nav-actions .landing-nav-cta:hover { border-color: var(--dm-action-hover); background: var(--dm-action-hover); transform: translateY(-1px); }
+.landing-v2 .landing-nav-actions .landing-nav-button:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
 .landing-v2 .landing-hero-content { width: 100%; max-width: 1360px; margin: auto; display: flex; align-items: center; }
 .landing-v2 .landing-copy { max-width: 730px; animation: landing-copy-in 900ms var(--dm-ease-out) 120ms both; }
 .landing-v2 .landing-hero h1 { max-width: 720px; margin-bottom: 24px; font-size: clamp(3.7rem, 8vw, 7.6rem); line-height: .92; letter-spacing: -.065em; text-wrap: balance; }
@@ -647,9 +653,10 @@ tbody tr:hover { background: var(--dm-surface-sunken); }
   .landing-v2 .landing-hero { min-height: 760px; padding: 18px 18px 22px; }
   .landing-v2 .landing-hero-image { object-position: 70% center; }
   .landing-v2 .landing-nav { margin-bottom: 42px; }
-  .landing-v2 .landing-nav-actions { gap: 12px; }
-  .landing-v2 .landing-nav-actions a:first-child { display: none; }
-  .landing-v2 .landing-nav-cta { font-size: .8rem; }
+  .landing-v2 .landing-nav { flex-wrap: wrap; row-gap: 12px; }
+  .landing-v2 .landing-nav-actions { width: 100%; justify-content: flex-end; gap: 8px; white-space: normal; }
+  .landing-v2 .landing-nav-actions a:first-child { display: inline-flex; }
+  .landing-v2 .landing-nav-actions .landing-nav-button {min-height: 40px; padding: 9px 12px; font-size: .72rem; }
   .landing-v2 .landing-hero h1 { font-size: clamp(3.35rem, 17vw, 5.3rem); }
   .landing-v2 .landing-tagline { font-size: .98rem; }
   .landing-v2 .landing-cta { align-items: flex-start; flex-direction: column; gap: 18px; }
@@ -868,3 +875,67 @@ tbody tr:hover { background: #f4f8f7; }
 .case-note { white-space: pre-wrap; overflow-wrap: anywhere; }
 .case-detail .table-actions { flex-wrap: wrap; margin: 12px 0; }
 @media (max-width: 480px) { .case-data { grid-template-columns: 1fr; } .case-data dd { margin-bottom: 8px; } }
+/* Botones de la navegación de la portada */
+.landing-v2 .landing-nav-actions .landing-nav-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 11px 16px;
+  border: 1px solid rgba(255, 255, 255, .8);
+  border-radius: 999px;
+  color: #fff;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background .2s ease, border-color .2s ease, transform .2s ease;
+}
+
+.landing-v2 .landing-nav-actions .landing-nav-login {
+  background: rgba(8, 25, 42, .3);
+}
+
+.landing-v2 .landing-nav-actions .landing-nav-login:hover {
+  background: rgba(255, 255, 255, .14);
+}
+
+.landing-v2 .landing-nav-actions .landing-nav-cta {
+  border-color: var(--dm-action);
+  background: var(--dm-action);
+}
+
+.landing-v2 .landing-nav-actions .landing-nav-cta:hover {
+  border-color: var(--dm-action-hover);
+  background: var(--dm-action-hover);
+  transform: translateY(-1px);
+}
+
+.landing-v2 .landing-nav-actions .landing-nav-button:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 3px;
+}
+
+/* Mantiene ambos botones visibles en pantallas pequeñas */
+@media (max-width: 640px) {
+  .landing-v2 .landing-nav {
+    flex-wrap: wrap;
+    row-gap: 12px;
+  }
+
+  .landing-v2 .landing-nav-actions {
+    width: 100%;
+    justify-content: flex-end;
+    gap: 8px;
+    white-space: normal;
+  }
+
+  .landing-v2 .landing-nav-actions a:first-child {
+    display: inline-flex;
+  }
+
+  .landing-v2 .landing-nav-actions .landing-nav-button {
+    min-height: 40px;
+    padding: 9px 12px;
+    font-size: .72rem;
+  }
+}
