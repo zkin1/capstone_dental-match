@@ -1123,3 +1123,52 @@ if ($current.Contains('Tarjetas para pacientes y estudiantes')) {
     border-radius: 20px;
   }
 }
+/* Etiquetas destacadas de pacientes y estudiantes */
+.landing-v2 .role-panel-top {
+  width: fit-content;
+  min-height: 56px;
+  gap: 12px;
+  margin-bottom: 48px;
+  padding: 8px 18px 8px 8px;
+  border: 1px solid rgba(16, 42, 67, .12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .72);
+  box-shadow: 0 8px 20px rgba(16, 42, 67, .08);
+  color: var(--dm-text);
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: .1em;
+}
+
+.landing-v2 .role-panel-top .dm-icon {
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  padding: 9px;
+  border-radius: 50%;
+  color: #fff;
+}
+
+.landing-v2 .role-panel-patient .role-panel-top .dm-icon {
+  background: var(--dm-danger-solid);
+}
+
+.landing-v2 .role-panel-student .role-panel-top .dm-icon {
+  background: var(--dm-action);
+}
+
+@media (max-width: 640px) {
+  .landing-v2 .role-panel-top {
+    min-height: 48px;
+    margin-bottom: 32px;
+    padding: 6px 14px 6px 6px;
+    font-size: .82rem;
+  }
+
+  .landing-v2 .role-panel-top .dm-icon {
+    width: 36px;
+    height: 36px;
+    padding: 8px;
+  }
+}
