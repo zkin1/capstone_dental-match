@@ -969,3 +969,157 @@ tbody tr:hover { background: #f4f8f7; }
     font-size: 1.3rem;
   }
 }
+$path = 'C:\Users\TheDa\Documents\dental_matching_IA\client\src\App.css'
+$current = [System.IO.File]::ReadAllText($path)
+
+if ($current.Contains('Tarjetas para pacientes y estudiantes')) {
+  Write-Host "Los estilos ya están agregados."
+} else {
+  $css = @'
+/* Tarjetas para pacientes y estudiantes */
+.landing-v2 .landing-roles {
+  gap: clamp(18px, 3vw, 36px);
+  padding: clamp(28px, 5vw, 72px);
+  background: #f3f0e9;
+}
+
+.landing-v2 .role-panel {
+  overflow: hidden;
+  border: 1px solid rgba(16, 42, 67, .08);
+  border-radius: 24px;
+  box-shadow: 0 18px 44px rgba(16, 42, 67, .12);
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.landing-v2 .role-panel:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 24px 52px rgba(16, 42, 67, .18);
+}
+
+.landing-v2 .role-panel-patient {
+  background: linear-gradient(140deg, var(--dm-teal-100), #f4fffb);
+}
+
+.landing-v2 .role-panel-student {
+  background: linear-gradient(140deg, var(--dm-primary-100), #f5f8ff);
+}
+
+.landing-v2 .role-panel-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: fit-content;
+  min-height: 48px;
+  padding: 12px 20px;
+  border: 1px solid var(--dm-action);
+  border-radius: 12px;
+  background: var(--dm-action);
+  color: #fff;
+  text-decoration: none;
+  box-shadow: 0 8px 18px rgba(16, 42, 67, .14);
+  transition: background .2s ease, transform .2s ease, box-shadow .2s ease;
+}
+
+.landing-v2 .role-panel-link:hover {
+  gap: 10px;
+  border-color: var(--dm-action-hover);
+  background: var(--dm-action-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(16, 42, 67, .2);
+}
+
+.landing-v2 .role-panel-link:focus-visible {
+  outline: 3px solid var(--dm-teal-500);
+  outline-offset: 3px;
+}
+
+@media (max-width: 640px) {
+  .landing-v2 .landing-roles {
+    grid-template-columns: 1fr;
+    gap: 18px;
+    padding: 24px 18px;
+  }
+
+  .landing-v2 .role-panel {
+    min-height: auto;
+    padding: 36px 24px;
+    border-radius: 20px;
+  }
+}
+'@
+  Add-Content -Path $path -Value $css -Encoding utf8
+  Write-Host "Estilos agregados a App.css."
+}
+/* Tarjetas para pacientes y estudiantes */
+.landing-v2 .landing-roles {
+  gap: clamp(18px, 3vw, 36px);
+  padding: clamp(28px, 5vw, 72px);
+  background: #f3f0e9;
+}
+
+.landing-v2 .role-panel {
+  overflow: hidden;
+  border: 1px solid rgba(16, 42, 67, .08);
+  border-radius: 24px;
+  box-shadow: 0 18px 44px rgba(16, 42, 67, .12);
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.landing-v2 .role-panel:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 24px 52px rgba(16, 42, 67, .18);
+}
+
+.landing-v2 .role-panel-patient {
+  background: linear-gradient(140deg, var(--dm-teal-100), #f4fffb);
+}
+
+.landing-v2 .role-panel-student {
+  background: linear-gradient(140deg, var(--dm-primary-100), #f5f8ff);
+}
+
+/* Enlaces con aspecto de botón */
+.landing-v2 .role-panel-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: fit-content;
+  min-height: 48px;
+  padding: 12px 20px;
+  border: 1px solid var(--dm-action);
+  border-radius: 12px;
+  background: var(--dm-action);
+  color: #fff;
+  text-decoration: none;
+  box-shadow: 0 8px 18px rgba(16, 42, 67, .14);
+  transition: background .2s ease, transform .2s ease, box-shadow .2s ease;
+}
+
+.landing-v2 .role-panel-link:hover {
+  gap: 10px;
+  border-color: var(--dm-action-hover);
+  background: var(--dm-action-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(16, 42, 67, .2);
+}
+
+.landing-v2 .role-panel-link:focus-visible {
+  outline: 3px solid var(--dm-teal-500);
+  outline-offset: 3px;
+}
+
+@media (max-width: 640px) {
+  .landing-v2 .landing-roles {
+    grid-template-columns: 1fr;
+    gap: 18px;
+    padding: 24px 18px;
+  }
+
+  .landing-v2 .role-panel {
+    min-height: auto;
+    padding: 36px 24px;
+    border-radius: 20px;
+  }
+}
