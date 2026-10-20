@@ -14,11 +14,15 @@ class NotificationsService {
   async send(id, user, manual = false) {
     if (!this.provider?.configured())
       throw new AppError(
-        'Configura RESEND_API_KEY y EMAIL_FROM para enviar correos',
+        'Configura el correo: EMAIL_PROVIDER=gmail con SMTP_USER y SMTP_PASS, o Resend con RESEND_API_KEY y EMAIL_FROM',
         503,
         'EMAIL_NOT_CONFIGURED'
       );
-    const notification = await this.repository.claim(id, manual);
+    const notification = await this.repository.claim(
+      id,
+      manual,
+      this.provider.idempotent !== false
+    );
     if (!notification) return null;
     if (notification.blocked) {
       if (manual) throw new ConflictError(notification.reason);

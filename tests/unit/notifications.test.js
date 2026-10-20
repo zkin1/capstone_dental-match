@@ -21,6 +21,7 @@ test('el proveedor debe confirmar antes de marcar enviado; los fallos quedan reg
   };
   const service = new Service(repo, provider);
   expect((await service.send(1, {}, true)).estado).toBe('enviado');
+  expect(repo.claim).toHaveBeenCalledWith(1, true, true);
   expect(repo.finish).toHaveBeenLastCalledWith(
     notification,
     'mail-1',
@@ -35,6 +36,26 @@ test('el proveedor debe confirmar antes de marcar enviado; los fallos quedan reg
     expect.any(Error),
     {}
   );
+});
+
+test('SMTP solicita bloquear reintentos inciertos antes de enviar', async () => {
+  const repo = {
+    claim: jest
+      .fn()
+      .mockResolvedValue({ blocked: true, reason: 'Revisar Gmail' }),
+  };
+  const provider = {
+    configured: () => true,
+    idempotent: false,
+    send: jest.fn(),
+  };
+  await expect(
+    new Service(repo, provider).send(1, {}, true)
+  ).rejects.toMatchObject({
+    statusCode: 409,
+  });
+  expect(repo.claim).toHaveBeenCalledWith(1, true, false);
+  expect(provider.send).not.toHaveBeenCalled();
 });
 test('el lote para al vaciarse la cola y los avisos bloqueados no se envían', async () => {
   const repo = {

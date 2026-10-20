@@ -1,9 +1,9 @@
 require('dotenv').config();
 const database = require('../src/infrastructure/database/connection');
 const Repository = require('../src/adapters/outbound/persistence/postgres/notifications.repository');
-const Provider = require('../src/adapters/outbound/email/resend.adapter');
+const createEmailProvider = require('../src/adapters/outbound/email/provider');
 const Service = require('../src/application/notifications/notifications.service');
-const service = new Service(new Repository(database), new Provider());
+const service = new Service(new Repository(database), createEmailProvider());
 let stopping = false;
 process.on('SIGINT', () => {
   stopping = true;
