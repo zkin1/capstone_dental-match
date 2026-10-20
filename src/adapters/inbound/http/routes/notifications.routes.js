@@ -5,13 +5,13 @@ const NotificationsService = require('../../../../application/notifications/noti
 const { authenticateToken, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
-const ResendAdapter = require('../../../outbound/email/resend.adapter');
+const createEmailProvider = require('../../../outbound/email/provider');
 const {
   numericId,
 } = require('../../../../application/assignments/case.service');
 const service = new NotificationsService(
   new NotificationsRepository(database),
-  new ResendAdapter()
+  createEmailProvider()
 );
 router.use(authenticateToken, requireRole(['admin', 'coordinator']));
 

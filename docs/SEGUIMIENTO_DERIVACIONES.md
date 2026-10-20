@@ -71,7 +71,12 @@ Abrir `http://127.0.0.1:3000`. La base es nueva para pruebas; no contiene pacien
 
 ## Correo
 
-Configurar `RESEND_API_KEY`, `EMAIL_FROM` (remitente verificado) y `EMAIL_INSTANCE_ID` (identificador estable y distinto por entorno/base). No cambiar el identificador entre reintentos.
+El servidor web y el trabajador comparten el proveedor seleccionado con `EMAIL_PROVIDER`:
+
+- `gmail`: configurar `SMTP_USER` con la cuenta completa y `SMTP_PASS` con una contraseña de aplicación de Google. Se conecta a `smtp.gmail.com:465` con TLS y usa esa cuenta como remitente Dental Match. La contraseña habitual de la cuenta no sirve para esta configuración. [Guía oficial de Nodemailer](https://nodemailer.com/guides/using-gmail), [contraseñas de aplicación de Google](https://support.google.com/mail/answer/185833?hl=es).
+- `resend` (predeterminado): configurar `RESEND_API_KEY`, `EMAIL_FROM` (remitente verificado) y `EMAIL_INSTANCE_ID` (identificador estable y distinto por entorno/base). No cambiar el identificador entre reintentos.
+
+Las credenciales van solo en el `.env` local excluido de Git o en secretos del servidor. En Vercel se configura únicamente el proyecto de API y el entorno Production; nunca el frontend.
 
 ```powershell
 npm run worker:email          # proceso continuo, separado del servidor web
@@ -80,9 +85,17 @@ npm run worker:email -- --once # procesar un lote y salir
 
 El trabajador reclama avisos exclusivamente, conserva el payload del primer intento y reintenta hasta cinco veces con espera creciente. El personal también puede enviar o reintentar desde la interfaz. Los avisos de asignaciones ya cerradas se omiten. `enviado` significa que el proveedor aceptó el mensaje; no confirma entrega o lectura.
 
-Los reintentos usan una clave de idempotencia. Resend conserva estas claves durante 24 horas; por eso un envío incierto de más de 23 horas se bloquea para revisión en el proveedor y evita un reenvío automático duplicado. [Documentación oficial de idempotencia](https://resend.com/docs/dashboard/emails/idempotency-keys), [API de envío](https://resend.com/docs/api-reference/emails/send-email).
+Resend usa una clave de idempotencia y la conserva durante 24 horas; por eso un envío incierto de más de 23 horas se bloquea para revisión en el proveedor. [Documentación oficial de idempotencia](https://resend.com/docs/dashboard/emails/idempotency-keys), [API de envío](https://resend.com/docs/api-reference/emails/send-email).
 
-El envío real requiere configurar el proveedor. Las pruebas usaron respuestas simuladas y no enviaron mensajes externos.
+Gmail SMTP no ofrece esa garantía. Un rechazo explícito permite reintentar; si se pierde la confirmación o vence un reclamo en curso, se bloquea el aviso desde el primer intento incierto, incluso desde la interfaz. Se debe comprobar Enviados de Gmail antes de resolverlo. `proximo_intento=NULL` evita repetirlo automáticamente.
+
+En Vercel el envío desde Notificaciones funciona dentro de la petición HTTP. El trabajador continuo requiere un proceso separado; desplegar la API no lo inicia automáticamente.
+
+### Verificación de Gmail — 20 de octubre de 2026
+
+Se confirmó el remitente `dentalmatchnotigicaciones@gmail.com` con el usuario, se verificó autenticación SMTP sobre TLS y Gmail aceptó un correo de prueba dirigido a esa misma cuenta. La prueba no incluyó información de pacientes. La aceptación no demuestra lectura ni entrega en la bandeja principal.
+
+Lint aprobado y 102 pruebas aprobadas, incluidas las pruebas PostgreSQL locales con esquemas temporales: selección del proveedor, autenticación/configuración, aceptación/rechazo SMTP, errores sin credenciales, y bloqueo inmediato de envíos inciertos o reclamos vencidos. No se modificó el repositorio principal `dental_matching_IA`.
 
 ## Timeout del agente
 

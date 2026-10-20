@@ -25,7 +25,7 @@ class NotificationsRepository {
     ).rows;
   }
 
-  async claim(id, manual = false) {
+  async claim(id, manual = false, idempotent = true) {
     return this.database.transaction(async (db) => {
       const result = await db.query(
         `SELECT * FROM notificaciones_email WHERE
@@ -76,19 +76,22 @@ class NotificationsRepository {
       }
       if (
         uncertain &&
-        notification.primer_intento &&
-        Date.now() - new Date(notification.primer_intento).getTime() >
-          23 * 3600000
+        (!idempotent ||
+          (notification.primer_intento &&
+            Date.now() - new Date(notification.primer_intento).getTime() >
+              23 * 3600000))
       ) {
+        const reason = idempotent
+          ? 'Envío incierto fuera de la ventana de idempotencia; revisar en el proveedor antes de reenviar'
+          : 'Envío SMTP incierto; revisar en Enviados de Gmail antes de reenviar';
         await db.query(
           `UPDATE notificaciones_email SET estado='fallido',envio_incierto=TRUE,proximo_intento=NULL,
-          error_envio='Envío incierto fuera de la ventana de idempotencia; revisar en el proveedor antes de reenviar' WHERE id=$1`,
-          [notification.id]
+          error_envio=$2 WHERE id=$1`,
+          [notification.id, reason]
         );
         return {
           blocked: true,
-          reason:
-            'Revisa el envío en el proveedor antes de reenviar: venció la ventana segura',
+          reason: reason,
         };
       }
       const token = crypto.randomUUID();

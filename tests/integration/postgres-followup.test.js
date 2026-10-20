@@ -696,6 +696,20 @@ run("seguimiento con PostgreSQL real", () => {
       ).rows[0].intentos_envio,
     ).toBe(3);
   });
+  test("cola SMTP: bloquea de inmediato un envío incierto o un reclamo vencido", async () => {
+    const repo = new NotificationsRepository(mockDatabase);
+    for (const state of ["fallido", "enviando"]) {
+      const row = (
+        await pool.query(`INSERT INTO notificaciones_email(email_destino,tipo_notificacion,asunto,estado,envio_incierto,primer_intento,fecha_reclamo)
+        VALUES ('demo@example.test','prueba','Prueba',$1,$2,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP-INTERVAL '6 minutes') RETURNING id`,
+        [state, state === "fallido"])
+      ).rows[0];
+      expect((await repo.claim(row.id, true, false)).blocked).toBe(true);
+      expect((await pool.query("SELECT proximo_intento,envio_incierto FROM notificaciones_email WHERE id=$1", [row.id])).rows[0]).toMatchObject({
+        proximo_intento: null, envio_incierto: true,
+      });
+    }
+  });
   test("cola: los errores inciertos antiguos y los avisos de asignaciones cerradas quedan bloqueados", async () => {
     const repo = new NotificationsRepository(mockDatabase);
     const row = (

@@ -531,7 +531,7 @@ La validación ejecutada durante la refactorización confirmó:
 
 La demo ya tiene el flujo funcional, pero antes de producción hay que completar:
 
-- configurar el proveedor de correo Resend y operar el trabajador implementado (ver guía de seguimiento);
+- operar el correo con Gmail o Resend y el trabajador implementado (ver [configuración y verificación](docs/SEGUIMIENTO_DERIVACIONES.md#correo));
 - backup y prueba de restauración de PostgreSQL;
 - secretos gestionados fuera de archivos locales;
 - obtener la primera ejecución aprobada del CI y exigir el check `quality` antes de integrar cambios;
