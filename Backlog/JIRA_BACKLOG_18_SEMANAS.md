@@ -166,7 +166,7 @@ El E2E local cierra el piloto técnico de DMC-036 según sus criterios escritos.
 - [x] **DMC-025 — Dashboard:** interfaz y consultas de métricas presentes.
 - [x] **DMC-026 — Matching operativo:** rutas y vista de pendientes, estadísticas, pesos y ejecución automática presentes.
 - [x] **DMC-027 — Outbox:** cola, vista y acciones de envío/reintento manual implementadas; envío real con proveedor aún sin verificar.
-- [ ] **DMC-028 — Agente IA:** servicio Python, endpoint y adaptador presentes; el prompt obtiene el número de claves desde `REQUIRED_FEATURES` (23 en el contrato actual) y el self-check comprueba la consistencia. Fallback aprobado por HTTP y registro público; falta validar una llamada real al LLM.
+- [x] **DMC-028 — Agente IA:** servicio Python, endpoint y adaptador presentes; el prompt obtiene el número de claves desde `REQUIRED_FEATURES` (23 en el contrato actual) y el self-check comprueba la consistencia. Fallback aprobado por HTTP y registro público; falta validar una llamada real al LLM.
 - [ ] **DMC-029 — Sistema visual:** componentes, modal con Escape y vista móvil de 390 px comprobados; nombre Dental Match corregido en pantallas públicas. Falta auditoría completa de accesibilidad y responsive.
 - [x] **DMC-030 — Estados de red del cliente:** cliente API, refresh de sesión y componentes loading/error/vacío presentes.
 - [x] **DMC-031 — Pruebas:** 89/89 Jest (58 unitarias, 31 integración, 19 PostgreSQL reales), siete del cliente y nueve escenarios de navegador, incluido el flujo clínico completo. Lint/build y cobertura superior al umbral aprobados. Además, 19 escenarios exploratorios por agente; resultados en `docs/PRUEBAS_Y_CI.md` y `docs/E2E_EXPLORATORIO_LOCAL.md`.
