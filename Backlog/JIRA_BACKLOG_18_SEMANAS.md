@@ -129,8 +129,8 @@ Los criterios de aceptación están escritos como condiciones verificables para 
 
 | Estado | Cantidad | Historias |
 |---|---:|---|
-| Completado | 30 | DMC-001 a DMC-027, DMC-030, DMC-031 y DMC-036 |
-| En progreso | 6 | DMC-028, DMC-029, DMC-032, DMC-033, DMC-034 y DMC-035 |
+| Completado | 31 | DMC-001 a DMC-027, DMC-030, DMC-031, DMC-033 y DMC-036 |
+| En progreso | 5 | DMC-028, DMC-029, DMC-032, DMC-034 y DMC-035 |
 | Por iniciar | 0 | No hay historias sin iniciar en esta tabla |
 
 El E2E local cierra el piloto técnico de DMC-036 según sus criterios escritos. La aprobación humana, la demostración desplegada y los controles operativos pendientes siguen siendo condiciones para la entrega final; no se declaran cumplidos por el resultado local.
