@@ -12,6 +12,8 @@ Demo de asignación de pacientes odontológicos a estudiantes de odontología cl
 
 Este documento es la fuente única de verdad del proyecto: describe la arquitectura, el flujo funcional, las reglas, la base de datos, la seguridad, el frontend, los comandos y las limitaciones conocidas.
 
+Integrantes: Carlos Avello, Benjamín Muñoz y Bastián Dìaz.
+
 ## 1. Objetivo y alcance
 
 El producto conecta pacientes que solicitan atención odontológica con estudiantes que tienen disponibilidad, especialidad y capacidad para atenderlos bajo supervisión clínica.
