@@ -63,26 +63,49 @@ export default function Landing() {
           </figure>
         </section>
 
-        <section className="landing-process" aria-labelledby="process-title">
-          <div className="landing-section-heading">
-            <p className="section-marker">Así funciona</p>
-            <h2 id="process-title">Te acompañamos paso a paso.</h2>
+  <section className="landing-process" aria-labelledby="process-title">
+    <div className="landing-section-heading">
+      <p className="section-marker">Así funciona</p>
+      <h2 id="process-title">Te acompañamos paso a paso.</h2>
+    </div>
+
+    <div className="process-layout">
+      <div className="process-list">
+        <article className="process-item">
+          <span className="process-number">01</span>
+          <div>
+            <h3>Cuéntanos qué te pasa</h3>
+            <p>Te hacemos algunas preguntas sobre tus molestias y tus datos de contacto para entender mejor tu situación.</p>
           </div>
-          <div className="process-list">
-            <article className="process-item">
-              <span className="process-number">01</span>
-                <div><h3>Cuéntanos qué te pasa</h3><p>Te hacemos algunas preguntas sobre tus molestias y tus datos de contacto para entender mejor tu situación.</p></div>
-            </article>
-            <article className="process-item">
-              <span className="process-number">02</span>
-                <div><h3>Vemos qué tipo de atención necesitas</h3><p>Revisamos tus respuestas para entender mejor qué atención puede ayudarte.</p></div>
-            </article>
-            <article className="process-item">
-              <span className="process-number">03</span>
-                <div><h3>Buscamos una buena alternativa</h3><p>Consideramos la especialidad, los horarios y la disponibilidad para buscar un estudiante que pueda atenderte con supervisión clínica.</p></div>
-            </article>
+        </article>
+
+        <article className="process-item">
+          <span className="process-number">02</span>
+          <div>
+            <h3>Vemos qué tipo de atención necesitas</h3>
+            <p>Revisamos tus respuestas para entender mejor qué atención puede ayudarte.</p>
           </div>
-        </section>
+        </article>
+
+        <article className="process-item">
+          <span className="process-number">03</span>
+          <div>
+            <h3>Buscamos una buena alternativa</h3>
+            <p>Consideramos la especialidad, los horarios y la disponibilidad para buscar un estudiante que pueda atenderte con supervisión clínica.</p>
+          </div>
+        </article>
+      </div>
+
+      <figure className="process-visual">
+        <img
+          src="/images/acompanamiento-paso-a-paso.png.png"
+          alt="Un estudiante de odontología y una paciente revisan juntos un plan de atención."
+          loading="lazy"
+        />
+        <figcaption>Te orientamos durante cada etapa.</figcaption>
+      </figure>
+    </div>
+  </section>
 
         <section className="landing-roles" aria-label="Elige cómo participar">
           <article className="role-panel role-panel-patient">
