@@ -588,6 +588,11 @@ tbody tr:hover { background: var(--dm-surface-sunken); }
 .landing-v2 .landing-nav-actions { display: flex; align-items: center; gap: 24px; white-space: nowrap; }
 .landing-v2 .landing-nav-actions a { color: #f6f8f5; }
 .landing-nav-cta { display: inline-flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--dm-teal-500); padding-bottom: 5px; }
+.landing-v2 .landing-hero-content { justify-content: flex-start; text-align: center; }
+.landing-v2 .landing-copy { width: min(54vw, 730px); max-width: 730px; margin: 0; text-align: center; }
+.landing-v2 .landing-hero h1,
+.landing-v2 .landing-tagline { margin-left: auto; margin-right: auto; }
+.landing-v2 .landing-cta { justify-content: center; }
 .landing-v2 .landing-nav-actions .landing-nav-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 11px 16px; border: 1px solid rgba(255, 255, 255, .8); border-radius: 999px; color: #fff; font-weight: 700; text-decoration: none; transition: background .2s ease, border-color .2s ease, transform .2s ease; }
 .landing-v2 .landing-nav-actions .landing-nav-login { background: rgba(8, 25, 42, .3); }
 .landing-v2 .landing-nav-actions .landing-nav-login:hover { background: rgba(255, 255, 255, .14); }
@@ -622,6 +627,66 @@ tbody tr:hover { background: var(--dm-surface-sunken); }
 .landing-section-heading { max-width: 1360px; margin: 0 auto 52px; }
 .landing-section-heading h2 { max-width: 740px; }
 .process-list { max-width: 1360px; margin: 0 auto; border-top: 1px solid #b9c9cb; }
+.landing-v2 .process-layout {
+  width: min(1360px, 100%);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(280px, 0.85fr);
+  gap: clamp(24px, 5vw, 72px);
+  align-items: stretch;
+}
+
+.landing-v2 .process-list {
+  max-width: none;
+  margin: 0;
+}
+
+.landing-v2 .process-visual {
+  width: min(100%, 420px);
+  min-height: 0;
+  align-self: center;
+  margin: 0 auto;
+  border-radius: 18px;
+  background: transparent;
+}
+
+.landing-v2 .process-visual img {
+  display: block;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  aspect-ratio: 1 / 1;
+  object-fit: contain;
+  border-radius: 18px;
+  box-shadow: 0 16px 36px rgba(16, 42, 67, 0.14);
+}
+
+.landing-v2 .process-visual figcaption {
+  position: static;
+  padding: 14px 4px 0;
+  color: var(--dm-text-muted);
+  font-weight: 600;
+  text-align: center;
+  background: none;
+}
+
+@media (max-width: 900px) {
+  .landing-v2 .process-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .landing-v2 .process-visual {
+  width: min(100%, 420px);
+  margin: 20px auto 0;
+}
+
+.landing-v2 .process-visual img {
+  height: auto;
+  min-height: 0;
+  max-height: none;
+}
+}
 .process-item { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 20px; padding: 28px 0; border-bottom: 1px solid #b9c9cb; }
 .process-number { color: var(--dm-danger-solid); font: 700 .92rem var(--dm-font-display); }
 .process-item h3 { margin-bottom: 8px; font-size: clamp(1.35rem, 2.3vw, 2.1rem); }
@@ -940,6 +1005,7 @@ tbody tr:hover { background: #f4f8f7; }
   }
 }
 /* Círculos para los números de los pasos */
+/* Números de los pasos: azul marino y menta */
 .landing-v2 .process-item {
   align-items: center;
 }
@@ -947,13 +1013,17 @@ tbody tr:hover { background: #f4f8f7; }
 .landing-v2 .process-number {
   display: grid;
   place-items: center;
-  width: 84px;
-  height: 84px;
-  border: 1px solid var(--dm-teal-500);
+  width: 88px;
+  height: 88px;
+  border: 2px solid var(--dm-teal-500);
   border-radius: 50%;
-  background: var(--dm-teal-100);
-  color: var(--dm-danger-solid);
-  font: 700 1.7rem var(--dm-font-display);
+  background: var(--dm-primary-900);
+  color: var(--dm-teal-100);
+  box-shadow:
+    inset 0 0 0 5px rgba(124, 200, 183, 0.12),
+    0 8px 20px rgba(16, 42, 67, 0.14);
+  font: 700 1.9rem var(--dm-font-display);
+  letter-spacing: -0.04em;
   line-height: 1;
 }
 
@@ -964,9 +1034,9 @@ tbody tr:hover { background: #f4f8f7; }
   }
 
   .landing-v2 .process-number {
-    width: 64px;
-    height: 64px;
-    font-size: 1.3rem;
+    width: 68px;
+    height: 68px;
+    font-size: 1.4rem;
   }
 }
 /* Tarjetas para pacientes y estudiantes */
@@ -1134,5 +1204,52 @@ tbody tr:hover { background: #f4f8f7; }
     width: 32px;
     height: 32px;
     flex-basis: 32px;
+  }
+}
+/* Tarjetas de participación: ritmo y acentos coherentes */
+.landing-v2 .role-panel {
+  justify-content: flex-start;
+  padding: clamp(40px, 5vw, 72px);
+  border-radius: 18px;
+  box-shadow: 0 12px 32px rgba(16, 42, 67, 0.1);
+}
+
+.landing-v2 .role-panel-top {
+  margin: 0 0 36px;
+}
+
+.landing-v2 .role-panel-patient .role-panel-top .dm-icon,
+.landing-v2 .role-panel-student .role-panel-top .dm-icon {
+  background: var(--dm-primary-900);
+  color: var(--dm-teal-100);
+}
+
+.landing-v2 .role-panel h2 {
+  min-height: 4.35em;
+}
+
+.landing-v2 .role-panel p {
+  min-height: 4.8em;
+  margin-bottom: 28px;
+}
+
+.landing-v2 .role-panel-link {
+  border-radius: 10px;
+  box-shadow: 0 6px 14px rgba(16, 42, 67, 0.12);
+}
+
+@media (max-width: 640px) {
+  .landing-v2 .role-panel {
+    min-height: auto;
+    padding: 34px 26px;
+  }
+
+  .landing-v2 .role-panel-top {
+    margin-bottom: 28px;
+  }
+
+  .landing-v2 .role-panel h2,
+  .landing-v2 .role-panel p {
+    min-height: 0;
   }
 }
