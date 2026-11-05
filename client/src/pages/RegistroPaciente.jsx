@@ -146,7 +146,7 @@ export default function RegistroPaciente() {
 
           <h2 className="form-section-title"><Icon name="id-card" size={17} /> Datos personales</h2>
           <div className="form-grid">
-            <Input label="Nombre completo" required value={datos.nombre_completo} onChange={e => setDato('nombre_completo', e.target.value)} />
+            <Input label="Nombre completo" required minLength={2} maxLength={120} pattern=".*\S.*" title="Escribe al menos 2 caracteres y no solo espacios." autoComplete="name" value={datos.nombre_completo} onChange={e => setDato('nombre_completo', e.target.value)} />
             <Input label="Teléfono" required value={datos.telefono} onChange={e => setDato('telefono', e.target.value)} />
             <Input label="Email" type="email" value={datos.email} onChange={e => setDato('email', e.target.value)} />
             <Input label="Edad" type="number" required min="1" max="120" value={datos.edad} onChange={e => setDato('edad', e.target.value)} />
