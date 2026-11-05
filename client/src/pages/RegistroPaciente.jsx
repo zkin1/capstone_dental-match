@@ -163,6 +163,8 @@ export default function RegistroPaciente() {
             className="full-width"
             rows={3}
             required
+            minLength={10}
+            maxLength={2000}
             placeholder="Ej: Me duele una muela desde hace una semana, sobre todo con cosas frías…"
             value={queja}
             onChange={e => setQueja(e.target.value)}
