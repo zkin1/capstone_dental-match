@@ -15,7 +15,7 @@ export default function StudentRegistrationForm({ staff = false, onCreated }) {
   const [form, setForm] = useState({
     nombre_completo: '', año_carrera: '4to', telefono: '', email: '', universidad: '',
     password: '', confirmPassword: '',
-    ciudad: 'Metropolitana', casos_necesarios: 10,
+    ciudad: '', casos_necesarios: 10,
     especialidades: [], horarios: {},
   });
   const [loading, setLoading] = useState(false);
@@ -120,6 +120,8 @@ export default function StudentRegistrationForm({ staff = false, onCreated }) {
             <Input label="Universidad" placeholder="Nombre de tu universidad" value={form.universidad} onChange={e => set('universidad', e.target.value)} />
             <Select label="Ciudad" required value={form.ciudad} onChange={e => set('ciudad', e.target.value)}>
               <option value="Metropolitana">Metropolitana</option>
+              <option value="" disabled>Selecciona tu Comuna</option>
+              <option value="Metropolitana">Santiago</option>
               <option value="Valparaíso">Valparaíso</option>
               <option value="Concepción">Concepción</option>
             </Select>
