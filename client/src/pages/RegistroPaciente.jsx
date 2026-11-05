@@ -73,6 +73,10 @@ export default function RegistroPaciente() {
 
   async function submit(e) {
     e.preventDefault();
+    if (queja.trim().length < 10) {
+      setError('Describe tu situación con al menos 10 caracteres.');
+      return;
+    }
     if (!respuestas.tipo_dolor) {
       setError('Indica cómo es el dolor (o selecciona "Sin dolor") en la sección "Sobre el dolor".');
       return;
