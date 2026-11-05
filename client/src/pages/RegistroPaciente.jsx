@@ -38,7 +38,7 @@ function esVisible(feature, respuestas) {
 
 export default function RegistroPaciente() {
   usePageTitle('Cuéntanos tu caso');
-  const [datos, setDatos] = useState({ nombre_completo: '', edad: '', telefono: '', email: '', ciudad: 'Metropolitana' });
+  const [datos, setDatos] = useState({ nombre_completo: '', edad: '', telefono: '', email: '', ciudad: '' });
   const [queja, setQueja] = useState('');
   const [respuestas, setRespuestas] = useState(buildRespuestasIniciales);
   const [loading, setLoading] = useState(false);
@@ -155,7 +155,8 @@ export default function RegistroPaciente() {
             <Input label="Email" type="email" maxLength={255} autoComplete="email" value={datos.email} onChange={e => setDato('email', e.target.value)} />
             <Input label="Edad" type="number" required min="1" max="120" value={datos.edad} onChange={e => setDato('edad', e.target.value)} />
             <Select label="Ciudad" required value={datos.ciudad} onChange={e => setDato('ciudad', e.target.value)}>
-              <option value="Metropolitana">Metropolitana</option>
+              <option value="" disabled>Selecciona tu Comuna</option>
+              <option value="Metropolitana">Santiago</option>
               <option value="Valparaíso">Valparaíso</option>
               <option value="Concepción">Concepción</option>
             </Select>
