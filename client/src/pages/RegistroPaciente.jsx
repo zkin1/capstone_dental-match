@@ -148,7 +148,7 @@ export default function RegistroPaciente() {
           <div className="form-grid">
             <Input label="Nombre completo" required minLength={2} maxLength={120} pattern=".*\S.*" title="Escribe al menos 2 caracteres y no solo espacios." autoComplete="name" value={datos.nombre_completo} onChange={e => setDato('nombre_completo', e.target.value)} />
             <Input label="Teléfono" type="tel" required minLength={8} maxLength={20} pattern="[0-9+() .-]{8,20}" title="Ingresa un teléfono de 8 a 20 caracteres, usando números y separadores habituales." autoComplete="tel" value={datos.telefono} onChange={e => setDato('telefono', e.target.value)} />
-            <Input label="Email" type="email" value={datos.email} onChange={e => setDato('email', e.target.value)} />
+            <Input label="Email" type="email" maxLength={255} autoComplete="email" value={datos.email} onChange={e => setDato('email', e.target.value)} />
             <Input label="Edad" type="number" required min="1" max="120" value={datos.edad} onChange={e => setDato('edad', e.target.value)} />
             <Select label="Ciudad" required value={datos.ciudad} onChange={e => setDato('ciudad', e.target.value)}>
               <option value="Metropolitana">Metropolitana</option>
