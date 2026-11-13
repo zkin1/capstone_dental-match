@@ -1,3 +1,4 @@
+const emailContent = require('./email-content');
 const nodemailer = require('nodemailer');
 
 class GmailAdapter {
@@ -29,9 +30,7 @@ class GmailAdapter {
       from: { name: 'Dental Match', address: process.env.SMTP_USER },
       to: [notification.email_destino],
       subject: notification.asunto,
-      text:
-        notification.mensaje ||
-        'Dental Match: tienes una nueva asignación. Revisa tu caso en la plataforma.',
+      ...emailContent(notification),
     };
   }
 

@@ -1,6 +1,7 @@
 import os
 import sys
 import hmac
+import logging
 from pathlib import Path
 
 AGENT_DIR = Path(__file__).resolve().parent
@@ -15,11 +16,13 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import Dict, Any
 
-from agent import pre_categorize
+from agent import normalize_answers, pre_categorize
 from llm_client import LLMClient
 
 app = FastAPI(title="AI Triage Agent", version="0.1.0")
-client = LLMClient()
+llm_enabled = os.getenv("LLM_ENABLED", "true").strip().lower() == "true"
+client = LLMClient() if llm_enabled else None
+logger = logging.getLogger("uvicorn.error")
 
 
 class PreCategorizeRequest(BaseModel):
@@ -28,7 +31,9 @@ class PreCategorizeRequest(BaseModel):
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "provider": client.provider, "model": client.model}
+    if client is None:
+        return {"status": "ok", "mode": "rules", "provider": "reglas", "model": None}
+    return {"status": "ok", "mode": "llm", "provider": client.provider, "model": client.model}
 
 
 @app.post("/pre-categorize")
@@ -38,10 +43,17 @@ def pre_categorize_endpoint(request: PreCategorizeRequest, x_agent_token: str | 
         raise HTTPException(status_code=503, detail="AI_AGENT_TOKEN no configurado")
     if not hmac.compare_digest(x_agent_token or "", token):
         raise HTTPException(status_code=401, detail="No autorizado")
+    if client is None:
+        return {"pre_categorization": normalize_answers(request.answers)}
+
     try:
         result = pre_categorize(request.answers, client=client)
         return {"pre_categorization": result}
-    except Exception:
+    except Exception as error:
+        logger.warning(
+            "Pre-categorización falló: provider=%s model=%s error=%s status=%s",
+            client.provider, client.model, type(error).__name__, getattr(error, "status_code", "-"),
+        )
         return JSONResponse(status_code=502, content={"error": "Pre-categorización no disponible"})
 
 

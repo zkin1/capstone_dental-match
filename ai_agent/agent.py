@@ -35,8 +35,8 @@ def _normalize_intensity(value):
     return 1
 
 
-def _normalize_pre_categorization(raw: Dict[str, Any]) -> Dict[str, Any]:
-    """Sanitize and validate the LLM output against the expected schema."""
+def normalize_answers(raw: Dict[str, Any]) -> Dict[str, Any]:
+    """Normalize structured answers to the triage schema."""
     normalized = {}
     for feature in REQUIRED_FEATURES:
         value = raw.get(feature)
@@ -55,7 +55,7 @@ def pre_categorize(answers, client=None) -> Dict[str, Any]:
 
     llm_output = client.chat(system_prompt, user_prompt)
     raw = _extract_json(llm_output)
-    return _normalize_pre_categorization(raw)
+    return normalize_answers(raw)
 
 
 def _self_check():

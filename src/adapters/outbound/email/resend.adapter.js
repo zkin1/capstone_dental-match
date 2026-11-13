@@ -1,3 +1,4 @@
+const emailContent = require('./email-content');
 class ResendAdapter {
   configured() {
     return Boolean(process.env.RESEND_API_KEY && process.env.EMAIL_FROM);
@@ -7,9 +8,7 @@ class ResendAdapter {
       from: process.env.EMAIL_FROM,
       to: [notification.email_destino],
       subject: notification.asunto,
-      text:
-        notification.mensaje ||
-        'Dental Match: tienes una nueva asignación. Revisa tu caso en la plataforma.',
+      ...emailContent(notification),
     };
   }
   async send(notification, payload) {

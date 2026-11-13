@@ -32,6 +32,8 @@ services:
       JWT_SECRET: ${JWT_SECRET:?Define JWT_SECRET}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?Define JWT_REFRESH_SECRET}
       AI_AGENT_URL: http://ai-agent:8001
+      AI_AGENT_TIMEOUT_MS: ${AI_AGENT_TIMEOUT_MS:-20000}
+      AI_AGENT_TOKEN: ${AI_AGENT_TOKEN:?Define AI_AGENT_TOKEN}
     depends_on:
       db:
         condition: service_healthy
@@ -47,17 +49,14 @@ services:
     environment:
       HOST: 0.0.0.0
       PORT: 8001
-      LLM_BASE_URL: ${LLM_BASE_URL:-http://host.docker.internal:11434/v1}
-      LLM_API_KEY: ${LLM_API_KEY:-ollama}
-      LLM_MODEL: ${LLM_MODEL:-qwen2.5:7b}
+      LLM_ENABLED: "false"
+      AI_AGENT_TOKEN: ${AI_AGENT_TOKEN:?Define AI_AGENT_TOKEN}
       TZ: ${TZ:-America/Santiago}
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health', timeout=3)"]
       interval: 10s
       timeout: 5s
       retries: 12
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
 
 volumes:
   postgres_data:

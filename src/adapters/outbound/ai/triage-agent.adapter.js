@@ -36,7 +36,7 @@ async function preCategorizar(respuestas) {
 
     if (!res.ok) {
       console.warn(
-        'AI Agent respondió con un estado no exitoso, usando fallback'
+        `AI Agent respondió HTTP ${res.status}, usando reglas de respaldo`
       );
       return null;
     }

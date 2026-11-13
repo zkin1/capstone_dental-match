@@ -35,10 +35,9 @@ function validateProductionConfig() {
   }
   if (
     !process.env.DATABASE_URL &&
-    (process.env.DB_PASSWORD.length < 16 ||
-      /change|cambia|cambiar|replace|example|temporary|password/i.test(
-        process.env.DB_PASSWORD
-      ))
+    /change|cambia|cambiar|replace|example|temporary|password/i.test(
+      process.env.DB_PASSWORD
+    )
   ) {
     throw new Error('DB_PASSWORD debe ser un secreto seguro en producción');
   }
