@@ -11,10 +11,10 @@ async function run() {
   let adminPage;
   const errors = [];
   const checks = [];
-  const evidence = path.join(__dirname, '../docs/evidencias');
+  const evidence = process.env.BROWSER_EVIDENCE_DIR || path.join(__dirname, '../docs/evidencias');
   await fs.mkdir(evidence, { recursive: true });
   try {
-    browser = await chromium.launch({ headless: true });
+    browser = await chromium.launch({ headless: true, channel: process.env.BROWSER_CHANNEL });
     adminPage = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
     adminPage.on('pageerror', error => errors.push(error.message));
     const login = async (page, email) => {
@@ -79,15 +79,16 @@ async function run() {
     await edit.waitFor({ state: 'hidden' });
     await adminPage.getByRole('cell', { name: 'Estudiante UI actualizado', exact: true }).waitFor();
     await adminPage.screenshot({ path: path.join(evidence, 'crear-estudiante-panel-20261005.png'), fullPage: true, animations: 'disabled' });
-    await adminPage.getByRole('button', { name: 'Editar a Estudiante UI actualizado', exact: true }).click();
-    await edit.getByLabel('Estado', { exact: true }).selectOption('inactivo');
-    await edit.getByRole('button', { name: 'Guardar', exact: true }).click();
-    await edit.waitFor({ state: 'hidden' });
+    await adminPage.getByRole('button', { name: 'Suspender a Estudiante UI actualizado', exact: true }).click();
+    const suspension = adminPage.getByRole('dialog', { name: 'Suspender cuenta' });
+    await suspension.getByRole('button', { name: 'Suspender', exact: true }).click();
+    await suspension.waitFor({ state: 'hidden' });
+    assert.equal((await studentPage.request.get(server.base + '/api/asignaciones/mias')).status(), 401);
     const inactive = await browser.newPage();
     await login(inactive, 'ui-student@example.com');
     await inactive.getByRole('alert').waitFor();
     assert.equal(new URL(inactive.url()).pathname, '/login');
-    checks.push('Edición y desactivación funcionan; cuenta desactivada no inicia sesión');
+    checks.push('Edición y suspensión funcionan; la cuenta suspendida pierde su sesión y no puede entrar');
 
     const coord = await browser.newPage();
     await login(coord, 'coordinator@example.com');
@@ -105,9 +106,36 @@ async function run() {
     await publicPage.goto(`${server.base}/registro-estudiante`);
     await fill(publicPage, 'public-student@example.com', 'Estudiante registro público');
     await publicPage.getByRole('button', { name: 'Crear mi perfil', exact: true }).click();
-    await publicPage.getByRole('heading', { name: '¡Listo! Tu perfil está creado.' }).waitFor();
+    await publicPage.getByRole('heading', { name: 'Tu perfil está pendiente de aprobación' }).waitFor();
     assert.match(await publicPage.locator('.confirmation-code').innerText(), /^EST-/);
-    checks.push('Regresión: registro público conserva confirmación y código del estudiante');
+    await login(publicPage, 'public-student@example.com');
+    await publicPage.getByRole('alert').filter({ hasText: 'Credenciales inválidas' }).waitFor();
+
+    await coord.reload();
+    await coord.getByRole('button', { name: 'Aprobar a Estudiante registro público' }).click();
+    const reviewProfile = coord.getByRole('dialog', { name: 'Perfil del estudiante' });
+    await reviewProfile.getByRole('table', { name: 'Horarios del estudiante' }).waitFor();
+    await reviewProfile.getByRole('button', { name: 'Aprobar cuenta', exact: true }).click();
+    const approval = coord.getByRole('dialog', { name: 'Aprobar cuenta' });
+    await approval.getByRole('button', { name: 'Aprobar', exact: true }).click();
+    await approval.waitFor({ state: 'hidden' });
+    await login(publicPage, 'public-student@example.com');
+    await publicPage.waitForURL('**/mis-asignaciones');
+    checks.push('Registro público pendiente: solo coordinación aprueba tras revisar horarios y cupos; luego el estudiante inicia sesión');
+
+    await publicPage.goto(server.base + '/mi-disponibilidad');
+    const date = new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10);
+    const blocked = publicPage.locator(`time[datetime="${date}"]`);
+    await publicPage.getByLabel('Fecha de ausencia').fill(date);
+    await publicPage.getByRole('button', { name: 'Bloquear fecha' }).click();
+    await blocked.waitFor();
+    await publicPage.reload();
+    await blocked.waitFor();
+    await publicPage.getByRole('button', { name: 'Quitar bloqueo' }).click();
+    await blocked.waitFor({ state: 'hidden' });
+    await publicPage.reload();
+    await publicPage.getByText('No tienes fechas bloqueadas.').waitFor();
+    checks.push('El selector de fecha guarda una ausencia, la conserva al recargar y permite quitarla');
     await adminPage.locator('.toast').last().waitFor({ state: 'hidden' });
     await adminPage.setViewportSize({ width: 390, height: 844 });
     await adminPage.getByRole('button', { name: 'Crear estudiante', exact: true }).click();
@@ -171,7 +199,7 @@ async function run() {
       assert.equal(await caseDialog.getByLabel('Estado del caso', { exact: true }).inputValue(), state);
     };
     await followUp(originPage, assignmentId, 'contactado', 'Revisé el caso y contacté al paciente sintético');
-    await originCase.getByRole('button', { name: 'Registrar derivación', exact: true }).click();
+    await originCase.getByRole('button', { name: 'Derivar caso', exact: true }).click();
     await originCase.getByLabel(/^Especialidad de destino/).selectOption('Endodoncia');
     await originCase.getByLabel(/^Prioridad/).selectOption('Alta');
     await originCase.getByLabel(/^Tratamiento que necesita/).fill('Evaluación endodóntica tras revisar el caso');
@@ -220,6 +248,34 @@ async function run() {
     const loads = await server.database.executeQuery('SELECT casos_activos FROM estudiantes_odontologia');
     assert(loads.rows.every(row => row.casos_activos === 0));
     checks.push('E2E clínico completo por interfaz: admin crea/asigna paciente → estudiante revisa contacto y deriva → admin aprueba → receptor contacta, trata y completa; historial y cupos confirmados en PostgreSQL');
+    await server.database.executeQuery(`INSERT INTO pacientes(nombre_completo,edad,telefono,ciudad,prioridad,respuestas_cuestionario)
+      SELECT 'Bandeja E2E ' || n, 30, '900000003', 'Valparaíso',
+        CASE WHEN n=22 THEN 'Muy Alta' ELSE 'Moderada' END,
+        CASE WHEN n=22 THEN '{"signos_infeccion":"Absceso/Hinchazon con fiebre"}'::jsonb ELSE '{}'::jsonb END
+      FROM generate_series(1,22) n`);
+    await coord.goto(server.base + '/patients');
+    await coord.getByLabel('Buscar casos').fill('Bandeja E2E');
+    await coord.getByRole('button', { name: 'Buscar', exact: true }).click();
+    await coord.getByText('Página 1 de 2 · 22 casos').waitFor();
+    const urgentRow = coord.getByRole('row').filter({ hasText: 'Bandeja E2E 22' });
+    await urgentRow.getByText('Revisión clínica', { exact: true }).waitFor();
+    await coord.getByRole('button', { name: 'Siguiente' }).click();
+    await coord.getByText('Página 2 de 2 · 22 casos').waitFor();
+    await coord.getByLabel('Filtrar casos').selectOption('revision');
+    await coord.getByText('Página 1 de 1 · 1 casos').waitFor();
+    await urgentRow.waitFor();
+
+    await coord.goto(server.base + '/matching');
+    await coord.getByRole('button', { name: 'Ejecutar Matching', exact: true }).click();
+    await coord.getByRole('dialog', { name: 'Ejecutar matching' }).getByRole('button', { name: 'Ejecutar', exact: true }).click();
+    const outcomes = coord.getByRole('table', { name: 'Casos sin asignar en esta ejecución' });
+    await outcomes.getByRole('row').filter({ hasText: 'Bandeja E2E 22' }).getByText(/revisión de coordinación/).waitFor();
+    assert(await outcomes.getByText(/No hay estudiantes con especialidad/).count() > 0);
+    await coord.reload();
+    await coord.getByRole('table', { name: 'Casos pendientes de matching' })
+      .getByRole('row').filter({ hasText: 'Bandeja E2E 22' }).getByText(/revisión de coordinación/).waitFor();
+    checks.push('Bandeja: búsqueda, paginación, filtro de revisión, alerta primero y motivos de matching por caso tras recargar');
+
     assert.deepEqual(errors, []);
     console.log(JSON.stringify({ status: 'passed', environment: 'local Chromium + PostgreSQL synthetic', checks, uat: 'Escenarios simulados; pendiente aceptación humana' }, null, 2));
   } catch (error) {

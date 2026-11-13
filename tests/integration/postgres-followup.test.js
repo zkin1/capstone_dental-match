@@ -438,6 +438,26 @@ run("seguimiento con PostgreSQL real", () => {
     const candidates = await matching.candidates(p.id);
     expect(candidates.some((c) => c.id_estudiante === student1.id)).toBe(false);
   });
+  test("el estudiante propone un receptor elegible y coordinación confirma esa elección", async () => {
+    const p = await patient("Con receptor elegido");
+    const a = await assignTo(p, student1);
+    await assignments.update(a.assignmentId, { estado: "contactado" }, student1.user);
+    const candidates = await caseService.referralCandidates(a.assignmentId, qualification.specialty, student1.user);
+    expect(candidates.map(candidate => candidate.id)).not.toContain(student1.id);
+    expect(candidates.map(candidate => candidate.id)).toContain(student3.id);
+    await expect(caseService.propose(a.assignmentId, {
+      ...qualification, id_estudiante_destino: student1.id,
+    }, student1.user)).rejects.toMatchObject({ statusCode: 409 });
+    const referral = await caseService.propose(a.assignmentId, {
+      ...qualification, id_estudiante_destino: student3.id,
+    }, student1.user);
+    const result = await caseService.review(referral.id, {
+      ...qualification, estado: "aprobada", motivo_revision: "Receptor elegido confirmado",
+    }, admin);
+    expect(result.matching).toMatchObject({
+      success: true, codigo_estudiante: student3.codigo_estudiante,
+    });
+  });
   test("aprobar sin especialidad compatible conserva el caso pendiente y la clasificación validada", async () => {
     const p = await patient("Sin receptor");
     const a = await assignTo(p, student1);
@@ -608,10 +628,12 @@ run("seguimiento con PostgreSQL real", () => {
     expect(
       (
         await request(app)
-          .get("/api/users")
+          .get("/api/asignaciones/mias")
           .set("Authorization", `Bearer ${token}`)
       ).status,
-    ).toBe(403);
+    ).toBe(401);
+    expect((await request(app).get("/api/users").set("Authorization",
+      `Bearer ${generateToken(await users.findById(student2.user.id))}`)).status).toBe(403);
     const accounts = await request(app)
       .get("/api/users")
       .set("Authorization", `Bearer ${generateToken(admin)}`);
@@ -719,7 +741,7 @@ run("seguimiento con PostgreSQL real", () => {
     expect((await repo.claim(row.id, true)).blocked).toBe(true);
     const p = await patient();
     const a = await assignTo(p, student1);
-    await assignments.update(a.assignmentId, { estado: "cancelado" }, admin);
+    await assignments.update(a.assignmentId, { estado: "cancelado", motivo_cancelacion: "Cancelación de prueba" }, admin);
     const id = (
       await pool.query(
         "SELECT id FROM notificaciones_email WHERE id_asignacion=$1 LIMIT 1",
@@ -774,7 +796,7 @@ run("seguimiento con PostgreSQL real", () => {
       student1.user,
     );
     const ownToken = generateToken(student1.user),
-      otherToken = generateToken(student2.user);
+      otherToken = generateToken(await users.findById(student2.user.id));
     expect(
       (
         await request(app)
@@ -905,6 +927,65 @@ run("seguimiento con PostgreSQL real", () => {
       expect((await request(app).delete(`/api/estudiantes/${id}`).set("Authorization", `Bearer ${generateToken(user)}`)).status).toBe(200);
       expect((await request(app).post("/api/auth/login").send({ email, password: "DentalTest!2026" })).status).toBe(401);
     }
+  });
+  test("registro público espera aprobación; suspensión excluye del matching e invalida la sesión anterior", async () => {
+    const email = "approval-demo@example.com";
+    const profile = await request(app).post("/api/estudiantes/register").send({
+      ...studentInput(email), ciudad: "Concepción",
+    });
+    expect(profile.status).toBe(201);
+    expect(profile.body.data.status).toBe("pending");
+    const { id } = profile.body.data;
+    const login = () => request(app).post("/api/auth/login").send({ email, password: "DentalTest!2026" });
+    const account = await users.findByEmail(email);
+    const p = await patient("Prueba de elegibilidad");
+    await pool.query("UPDATE pacientes SET ciudad='Concepción' WHERE id=$1", [p.id]);
+    expect(await matching.candidates(p.id)).toHaveLength(0);
+    expect((await login()).status).toBe(401);
+    const coordinator = (await pool.query(
+      "SELECT * FROM users WHERE role='coordinator' AND status='active' ORDER BY id LIMIT 1"
+    )).rows[0];
+    const endpoint = `/api/estudiantes/${id}/cuenta`;
+    const status = (actor, value) => request(app).patch(endpoint)
+      .set("Authorization", `Bearer ${generateToken(actor)}`).send({ status: value });
+    expect((await status(student1.user, "active")).status).toBe(403);
+    await expect(users.manageAccount(account.id, {
+      role: "student", status: "active", nombre_completo: account.nombre_completo, permissions: [],
+    })).rejects.toMatchObject({ statusCode: 409 });
+    expect((await status(coordinator, "active")).status).toBe(200);
+    expect(await matching.candidates(p.id)).toHaveLength(1);
+    const agent = request.agent(app);
+    expect((await agent.post("/api/auth/login").send({ email, password: "DentalTest!2026" })).status).toBe(200);
+    expect((await agent.get("/api/estudiantes/mi-disponibilidad")).status).toBe(200);
+    expect((await status(coordinator, "suspended")).status).toBe(200);
+    expect(await matching.candidates(p.id)).toHaveLength(0);
+    expect((await agent.get("/api/estudiantes/mi-disponibilidad")).status).toBe(401);
+    expect((await status(coordinator, "active")).status).toBe(200);
+    expect((await agent.get("/api/estudiantes/mi-disponibilidad")).status).toBe(401);
+    expect((await agent.post("/api/auth/refresh-token")).status).toBe(401);
+    expect((await login()).status).toBe(200);
+  });
+  test("bandeja pagina resultados y separa la alerta clínica de los casos sin candidato", async () => {
+    const first = await patient("BandejaQA sin candidato");
+    const urgent = await patient("BandejaQA alerta clínica");
+    await pool.query("UPDATE pacientes SET ciudad='Valparaíso' WHERE id=ANY($1::bigint[])", [[first.id, urgent.id]]);
+    await pool.query(`UPDATE pacientes SET respuestas_cuestionario='{"signos_infeccion":"Absceso/Hinchazon con fiebre"}',
+      pre_categorizacion_ia='{"signos_infeccion":"Ninguno"}' WHERE id=$1`, [urgent.id]);
+    expect(await matching.matchPatient(urgent.id)).toMatchObject({ success: false, reason: expect.stringMatching(/alerta clínica/) });
+    expect(await matching.matchPatient(first.id)).toMatchObject({ success: false, reason: expect.stringMatching(/No hay estudiantes/) });
+    const getQueue = path => request(app).get(path).set("Authorization", `Bearer ${generateToken(admin)}`);
+    const pageOne = await getQueue("/api/pacientes?q=BandejaQA&limite=1");
+    expect(pageOne.status).toBe(200);
+    expect(pageOne.body.pagination).toEqual({ total: 2, page: 1, pageSize: 1 });
+    expect(pageOne.body.data).toEqual([expect.objectContaining({ id: urgent.id, requiere_revision: true })]);
+    const pageTwo = await getQueue("/api/matching/pending?q=BandejaQA&limite=1&pagina=2");
+    expect(pageTwo.status).toBe(200);
+    expect(pageTwo.body.data).toEqual([expect.objectContaining({
+      id: first.id, requiere_revision: false, motivo_matching: expect.stringMatching(/No hay estudiantes/),
+    })]);
+    const onlyUrgent = await getQueue("/api/pacientes?q=BandejaQA&filtro=revision");
+    expect(onlyUrgent.body.pagination.total).toBe(1);
+    expect(onlyUrgent.body.data[0].motivo_matching).toMatch(/alerta clínica/);
   });
   test("crear estudiante exige personal; rechaza duplicados y entradas inválidas sin registros parciales", async () => {
     const input = studentInput("managed-admin@example.com");

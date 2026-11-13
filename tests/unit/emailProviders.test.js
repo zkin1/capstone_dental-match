@@ -57,6 +57,7 @@ test('envía el contenido al destinatario y confirma la aceptación de Gmail', a
     to: ['student@example.test'],
     subject: 'Nueva asignación',
     text: 'Revisa la plataforma.',
+    html: expect.stringContaining('Revisa la plataforma.'),
   });
   await expect(provider.send(notification, payload)).resolves.toBe('gmail-1');
   expect(sendMail).toHaveBeenCalledWith(payload);

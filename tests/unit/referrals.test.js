@@ -210,3 +210,20 @@ test('el registro continúa aunque el puerto de IA lance un error', async () => 
     intensidad_dolor: 7,
   });
 });
+
+test('una cancelación exige motivo explícito y lo guarda sin espacios exteriores', () => {
+  const current = { estado: 'contactado' };
+  const user = { role: 'coordinator' };
+  expect(decideUpdate(current, { estado: 'cancelado', observaciones_estudiante: 'Nota libre' }, user))
+    .toMatchObject({ ok: false, code: 'VALIDATION' });
+  expect(decideUpdate(current, { estado: 'cancelado', motivo_cancelacion: '  Paciente no disponible  ' }, user))
+    .toMatchObject({ ok: true, cancellationReason: 'Paciente no disponible' });
+});
+
+test('la normalización del agente no elimina la alerta declarada en el cuestionario', () => {
+  expect(scorePatientCategory({
+    edad: 30,
+    respuestas_cuestionario: { signos_infeccion: 'Absceso/Hinchazon con fiebre' },
+    pre_categorizacion_ia: { signos_infeccion: 'Ninguno' },
+  })).toMatchObject({ redFlag: true, priority: 'Muy Alta' });
+});

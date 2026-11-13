@@ -64,7 +64,8 @@ async function main() {
   }
 
   console.log('✅ Agente activo y pre-categorizando correctamente.');
-  console.log(`   LLM configurado: ${health.provider || 'no informado'} / ${health.model || 'sin modelo'}`);
+  if (health.mode === 'rules') console.log('   Modo: reglas sin LLM');
+  else console.log(`   LLM configurado: ${health.provider || 'no informado'} / ${health.model || 'sin modelo'}`);
   console.log(`   Resultado: ${JSON.stringify(preCategorization)}`);
 }
 
