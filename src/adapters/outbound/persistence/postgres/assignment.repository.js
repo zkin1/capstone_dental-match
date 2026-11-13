@@ -5,7 +5,7 @@ const { appendEvent, lockAssignment } = require('./case-history');
 
 const SELECT_ASSIGNMENTS = `
   SELECT a.id, a.id_paciente, a.id_estudiante, a.fecha_asignacion, a.fecha_cita,
-         a.estado, a.especialidad_asignada, a.dia_semana_asignado,
+         a.estado, a.especialidad_asignada, a.dia_semana_asignado, ee.clinica AS clinica_asignada,
          a.hora_inicio_asignada, a.hora_fin_asignada, a.score_compatibilidad,
          a.factores_matching, a.observaciones_sistema, a.observaciones_estudiante,
          p.nombre_completo AS paciente_nombre, p.telefono AS paciente_telefono,
@@ -13,7 +13,8 @@ const SELECT_ASSIGNMENTS = `
          e.nombre_completo AS estudiante_nombre, e.codigo_estudiante
     FROM asignaciones a
     JOIN pacientes p ON p.id = a.id_paciente
-    JOIN estudiantes_odontologia e ON e.id = a.id_estudiante`;
+    JOIN estudiantes_odontologia e ON e.id = a.id_estudiante
+    LEFT JOIN especialidades_estudiante ee ON ee.id = a.id_especialidad_estudiante`;
 
 class AssignmentRepository {
   constructor(database) {
@@ -77,8 +78,10 @@ class AssignmentRepository {
           );
         if (decision.nextState === 'completado')
           updates.push('fecha_completado = CURRENT_TIMESTAMP');
-        if (decision.nextState === 'cancelado')
+        if (decision.nextState === 'cancelado') {
           updates.push('fecha_cancelacion = CURRENT_TIMESTAMP');
+          add('motivo_cancelacion', decision.cancellationReason);
+        }
       }
       if (decision.observation !== undefined)
         add('observaciones_estudiante', decision.observation);
@@ -122,8 +125,8 @@ class AssignmentRepository {
         decision.nextState === assignment.estado ? 'nota' : 'estado',
         assignment.estado,
         decision.nextState,
-        decision.observation
-      );
+        decision.cancellationReason || decision.observation,
+        decision.cancellationReason ? { motivo_cancelacion: decision.cancellationReason } : {}      );
       return { ok: true, message: 'Asignación actualizada' };
     });
   }

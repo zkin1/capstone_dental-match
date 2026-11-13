@@ -64,8 +64,20 @@ function createMatchingService(repository) {
     return repository.withMatchingLock(async () => {
       const patients = await repository.listPendingIds();
       const results = [];
-      for (const patient of patients)
-        results.push(await matchPatient(patient.id));
+      for (const patient of patients) {
+        let result;
+        try {
+          result = await matchPatient(patient.id);
+        } catch (error) {
+          const reason = 'No se pudo procesar este caso. Se puede reintentar.';
+          console.error('Error en matching del caso %s: %s', patient.id, error.message);
+          await repository.recordFailure(patient.id, reason).catch(error => {
+            console.error('No se pudo guardar el resultado del caso %s: %s', patient.id, error.message);
+          });
+          result = { success: false, reason };
+        }
+        results.push({ patientId: patient.id, paciente: patient.nombre_completo, ...result });
+      }
       const matches = results.filter((result) => result.success);
       return {
         success: true,
@@ -90,7 +102,6 @@ function createMatchingService(repository) {
     matchPatient,
     executeAdvancedMatching,
     getStats: () => repository.getStats(),
-    listPending: () => repository.listPending(),
     candidates: (patientId, assignmentId) =>
       repository.candidates(
         patientId,

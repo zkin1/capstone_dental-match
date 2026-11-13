@@ -1,5 +1,6 @@
 const { parseJson } = require('../../../../domain/common');
-const { scorePatientCategory } = require('../../../../domain/matching/scoring');
+const { scorePatientCategory, scheduleCompatibility } = require('../../../../domain/matching/scoring');
+const MatchingRepository = require('./matching.repository');
 const { canRefer } = require('../../../../domain/assignments/referral.policy');
 const {
   NotFoundError,
@@ -11,6 +12,7 @@ const { appendEvent, lockAssignment } = require('./case-history');
 class CaseRepository {
   constructor(database) {
     this.database = database;
+    this.matching = new MatchingRepository(database);
   }
 
   async detail(id, user, byAssignment = false) {
@@ -19,8 +21,9 @@ class CaseRepository {
     if (byAssignment) {
       assignment = (
         await db.query(
-          `SELECT a.*,e.nombre_completo AS estudiante_nombre,e.codigo_estudiante
-        FROM asignaciones a JOIN estudiantes_odontologia e ON e.id=a.id_estudiante WHERE a.id=$1`,
+          `SELECT a.*,e.nombre_completo AS estudiante_nombre,e.codigo_estudiante,ee.clinica AS clinica_asignada
+        FROM asignaciones a JOIN estudiantes_odontologia e ON e.id=a.id_estudiante
+        LEFT JOIN especialidades_estudiante ee ON ee.id=a.id_especialidad_estudiante WHERE a.id=$1`,
           [id]
         )
       ).rows[0];
@@ -102,7 +105,7 @@ class CaseRepository {
       await db.query(
         `UPDATE pacientes SET precalificacion_validada=$1,tipo_tratamiento_inferido=$2,
         precalificacion_sugerida=COALESCE(precalificacion_sugerida,$5::jsonb),
-        prioridad=$3,fecha_actualizacion=CURRENT_TIMESTAMP WHERE id=$4`,
+        prioridad=$3,ultimo_matching_en=NULL,ultimo_motivo_matching=NULL,fecha_actualizacion=CURRENT_TIMESTAMP WHERE id=$4`,
         [
           JSON.stringify(validated),
           qualification.specialty,
@@ -128,7 +131,46 @@ class CaseRepository {
     });
   }
 
-  async propose(assignmentId, qualification, user) {
+  async compatibleReceivers(db, assignment, specialty) {
+    const patient = (
+      await db.query('SELECT * FROM pacientes WHERE id=$1 AND activo=TRUE', [assignment.id_paciente])
+    ).rows[0];
+    if (!patient) throw new NotFoundError('Paciente', assignment.id_paciente);
+    const slots = await this.matching.availableCandidates(
+      db, patient, { specialty }, assignment.id_estudiante
+    );
+    const students = new Map();
+    for (const slot of slots) {
+      if (scheduleCompatibility(patient, slot) < 1) continue;
+      const id = slot.id_estudiante;
+      if (!students.has(id)) students.set(id, {
+        id,
+        nombre: slot.nombre_completo,
+        clinica: slot.clinica,
+        casos_activos: slot.casos_activos,
+        casos_necesarios: slot.casos_necesarios,
+        horarios: [],
+      });
+      students.get(id).horarios.push({
+        fecha: slot.fecha_cita,
+        inicio: slot.hora_inicio,
+        termino: slot.hora_fin,
+      });
+    }
+    return [...students.values()].sort((a, b) =>
+      a.casos_activos - b.casos_activos || a.nombre.localeCompare(b.nombre, 'es')
+    );
+  }
+
+  referralCandidates(assignmentId, specialty, user) {
+    return this.database.transaction(async db => {
+      const assignment = await lockAssignment(db, assignmentId);
+      canRefer(assignment, user);
+      return this.compatibleReceivers(db, assignment, specialty);
+    });
+  }
+
+  async propose(assignmentId, qualification, user, receiverId) {
     return this.database.transaction(async (db) => {
       const assignment = await lockAssignment(db, assignmentId);
       canRefer(assignment, user);
@@ -139,6 +181,12 @@ class CaseRepository {
       );
       if (previous.rows.length)
         throw new ConflictError('Este estudiante ya derivó este paciente');
+      if (receiverId) {
+        const candidates = await this.compatibleReceivers(db, assignment, qualification.specialty);
+        const receiver = candidates.find(candidate => String(candidate.id) === String(receiverId));
+        if (!receiver) throw new ConflictError('El receptor elegido ya no cumple los requisitos del caso');
+        qualification.receptor = { id: receiver.id, nombre: receiver.nombre };
+      }
       const result = await db.query(
         `INSERT INTO derivaciones
         (id_paciente,id_asignacion_origen,id_estudiante_origen,estado_anterior,propuesta,id_solicitante)

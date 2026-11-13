@@ -119,10 +119,13 @@ class UserRepository {
       await db.query(
         "SELECT pg_advisory_xact_lock(hashtext('dental_match_accounts'))"
       );
+      await db.query("SELECT pg_advisory_xact_lock(hashtext('dental_match_allocation'))");
       const user = (
         await db.query('SELECT * FROM users WHERE id=$1 FOR UPDATE', [id])
       ).rows[0];
       if (!user) throw new NotFoundError('Usuario', id);
+      if (user.status === 'pending')
+        throw new ConflictError('Aprueba el perfil pendiente desde Estudiantes');
       if (
         user.role === 'admin' &&
         user.status === 'active' &&
@@ -148,7 +151,8 @@ class UserRepository {
       }
       const result = await db.query(
         `UPDATE users SET nombre_completo=$1,role=$2,status=$3,permissions=$4,
-        refresh_token_hash=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=$5
+        refresh_token_hash=NULL,session_version=session_version + CASE WHEN status<>$3::varchar THEN 1 ELSE 0 END,
+        updated_at=CURRENT_TIMESTAMP WHERE id=$5
         RETURNING id,email,nombre_completo,role,status,codigo_estudiante`,
         [
           changes.nombre_completo,

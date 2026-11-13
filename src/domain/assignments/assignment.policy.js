@@ -62,8 +62,20 @@ function decideUpdate(assignment, input, user) {
     };
   }
 
+  const cancellationReason =
+    typeof input.motivo_cancelacion === 'string' ? input.motivo_cancelacion.trim() : '';
+  if (nextState === 'cancelado' && nextState !== assignment.estado &&
+      (cancellationReason.length < 5 || cancellationReason.length > 2000)) {
+    return {
+      ok: false,
+      code: 'VALIDATION',
+      message: 'Indica el motivo de cancelación (5 a 2000 caracteres)',
+    };
+  }
+
   return {
     ok: true,
+    cancellationReason,
     nextState,
     isActive: ACTIVE_ASSIGNMENT_STATES.includes(nextState),
     observation:

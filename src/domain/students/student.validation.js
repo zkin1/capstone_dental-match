@@ -61,14 +61,13 @@ function normalizeSpecialties(values) {
 }
 
 function validateStaffUpdate(input) {
-  const allowed = ['nombre_completo', 'año_carrera', 'telefono', 'email', 'universidad', 'ciudad', 'casos_necesarios', 'estado'];
+  const allowed = ['nombre_completo', 'año_carrera', 'telefono', 'email', 'universidad', 'ciudad', 'casos_necesarios'];
   const entries = allowed.filter(field => input[field] !== undefined);
   if (!entries.length) return { error: 'No hay campos permitidos para actualizar' };
   if (input.año_carrera && !['4to', '5to'].includes(input.año_carrera)) {
     return { error: 'El año de carrera no es válido' };
   }
   if (input.ciudad && !CITIES.includes(input.ciudad)) return { error: 'La ciudad no es válida' };
-  if (input.estado && !['activo', 'inactivo'].includes(input.estado)) return { error: 'El estado no es válido' };
   if (input.email !== undefined && emailSchema.validate(input.email).error) return { error: 'El email no es válido' };
 
   const changes = Object.fromEntries(entries.map(field => {

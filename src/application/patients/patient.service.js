@@ -49,6 +49,7 @@ class PatientService {
       this.matching.scorePatientCategory({
         ...validation.value,
         pre_categorizacion_ia: preCategory,
+        respuestas_cuestionario: validation.answers,
         prioridad: 'Moderada',
       });
 
@@ -70,6 +71,7 @@ class PatientService {
               codigo: assignment.codigo_estudiante,
               fecha: assignment.fecha_cita,
               horario: assignment.horario,
+              clinica: assignment.clinica,
               score: assignment.score,
             }
           : null,
@@ -77,8 +79,8 @@ class PatientService {
     };
   }
 
-  list() {
-    return this.repository.list();
+  list(query) {
+    return this.repository.list(query);
   }
 
   getStats() {

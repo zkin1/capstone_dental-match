@@ -35,7 +35,7 @@ router.post('/intake', intakeLimiter, async (req, res, next) => {
 
 router.get('/', ...staffOnly, async (req, res, next) => {
   try {
-    return res.json({ success: true, data: await service.list() });
+    return res.json({ success: true, ...(await service.list(req.query)) });
   } catch (error) {
     return next(error);
   }

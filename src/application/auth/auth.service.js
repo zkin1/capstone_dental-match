@@ -56,7 +56,9 @@ class AuthService {
     try {
       const decoded = this.tokenService.verifyRefreshToken(refreshToken);
       const user = await this.userRepository.findById(decoded.id);
-      if (!user || user.status !== 'active' || user.refresh_token_hash !== tokenHash(refreshToken)) {
+      if (!user || user.status !== 'active' ||
+          (user.session_version ?? 0) !== (decoded.session_version ?? 0) ||
+          user.refresh_token_hash !== tokenHash(refreshToken)) {
         throw new Error('invalid');
       }
       return this.issueTokens(user);

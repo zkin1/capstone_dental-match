@@ -1,10 +1,10 @@
-const { ACTIVE_ASSIGNMENT_STATES } = require('../../../../domain/common');
+const { ACTIVE_ASSIGNMENT_STATES, parseJson } = require('../../../../domain/common');
 const { appendEvent } = require('./case-history');
 const {
   ConflictError,
   NotFoundError,
 } = require('../../../../shared/errors/AppError');
-const { CLINICS, nextDateFor } = require('../../../../domain/matching/scoring');
+const { CLINICS, nextDateFor, REVIEW_REQUIRED_REASON } = require('../../../../domain/matching/scoring');
 
 function placeholders(start, values) {
   return values.map((_, index) => `$${start + index}`).join(', ');
@@ -73,30 +73,35 @@ class MatchingRepository {
           JSON.stringify(suggestion),
         ]
       );
+      const pending = async (reason) => {
+        if (patient.estado === 'pendiente')
+          await this.recordPending(db, patientId, reason);
+        return { success: false, reason, category };
+      };
+      if (category.redFlag && !category.validated) return pending(REVIEW_REQUIRED_REASON);
       const candidates = await this.availableCandidates(
         db,
         patient,
         category,
         active?.id_estudiante
       );
-      const selected = selectCandidate(
-        patient,
-        options.manual
-          ? candidates.filter(
-              (c) =>
-                String(c.id_especialidad_estudiante) ===
-                String(options.scheduleId)
-            )
-          : candidates,
-        category
+      let preferredStudentId;
+      if (patient.derivacion_id && !options.manual) {
+        const referral = await db.query(
+          "SELECT propuesta FROM derivaciones WHERE id=$1 AND estado='aprobada' AND id_asignacion_destino IS NULL",
+          [patient.derivacion_id]
+        );
+        preferredStudentId = parseJson(referral.rows[0]?.propuesta)?.receptor?.id;
+      }
+      const eligible = candidates.filter((candidate) =>
+        (!options.manual || String(candidate.id_especialidad_estudiante) === String(options.scheduleId)) &&
+        (!preferredStudentId || String(candidate.id_estudiante) === String(preferredStudentId))
       );
+      const selected = selectCandidate(patient, eligible, category);
       if (!selected)
-        return {
-          success: false,
-          reason:
-            'No hay estudiantes con especialidad, ciudad, clínica, horario y capacidad compatibles',
-          category,
-        };
+        return pending(preferredStudentId
+          ? 'El receptor propuesto ya no está disponible. El caso quedó pendiente de receptor.'
+          : 'No hay estudiantes con especialidad, ciudad, clínica, horario y capacidad compatibles');
       if (active) {
         await db.query(
           "UPDATE asignaciones SET estado='cancelado',motivo_cancelacion=$1,fecha_cancelacion=CURRENT_TIMESTAMP,fecha_actualizacion=CURRENT_TIMESTAMP WHERE id=$2",
@@ -117,6 +122,8 @@ class MatchingRepository {
           options.reason
         );
       }
+      if (preferredStudentId)
+        selected.factors.motivo_reparto = 'Receptor propuesto por el estudiante y aprobado por coordinación';
       if (options.manual)
         selected.factors = {
           ...selected.factors,
@@ -156,7 +163,7 @@ class MatchingRepository {
     );
     const assignmentId = insert.rows[0].id;
     await db.query(
-      "UPDATE pacientes SET estado='asignado',fecha_actualizacion=CURRENT_TIMESTAMP WHERE id=$1",
+      "UPDATE pacientes SET estado='asignado',ultimo_motivo_matching=NULL,ultimo_matching_en=NULL,fecha_actualizacion=CURRENT_TIMESTAMP WHERE id=$1",
       [patient.id]
     );
     await db.query(
@@ -216,6 +223,7 @@ class MatchingRepository {
       estudiante: selected.nombre_completo,
       codigo_estudiante: selected.codigo_estudiante,
       especialidad: selected.especialidad,
+      clinica: selected.clinica,
       fecha_cita: selected.fecha_cita,
       horario: `${selected.dia_semana} ${selected.hora_inicio}-${selected.hora_fin}`,
       score: selected.score,
@@ -248,18 +256,28 @@ class MatchingRepository {
       ]
     );
     const available = [];
+    const availabilityByStudent = new Map();
     for (const candidate of result.rows) {
-      // Re-read load after acquiring the student lock: concurrent assignments may have committed while waiting.
-      const load = (
-        await db.query(
+      if (!availabilityByStudent.has(candidate.id_estudiante)) {
+        const load = await db.query(
           'SELECT COUNT(*) AS total FROM asignaciones WHERE id_estudiante=$1 AND estado=ANY($2::text[])',
           [candidate.id_estudiante, ACTIVE_ASSIGNMENT_STATES]
-        )
-      ).rows[0];
-      candidate.casos_activos = Number(load.total);
-      if (candidate.casos_activos >= Number(candidate.casos_necesarios))
-        continue;
-      const date = nextDateFor(candidate.dia_semana);
+        );
+        const absences = await db.query(
+          'SELECT fecha::text FROM ausencias_estudiante WHERE id_estudiante=$1 AND fecha>=CURRENT_DATE',
+          [candidate.id_estudiante]
+        );
+        availabilityByStudent.set(candidate.id_estudiante, {
+          load: Number(load.rows[0].total),
+          blocked: new Set(absences.rows.map(row => row.fecha)),
+        });
+      }
+      const { load, blocked } = availabilityByStudent.get(candidate.id_estudiante);
+      candidate.casos_activos = load;
+      if (load >= Number(candidate.casos_necesarios)) continue;
+      let weeksLater = 0;
+      let date = nextDateFor(candidate.dia_semana);
+      while (blocked.has(date)) date = nextDateFor(candidate.dia_semana, ++weeksLater);
       const count = await db.query(
         `SELECT COUNT(*) AS total FROM asignaciones WHERE id_estudiante=$1 AND fecha_cita=$2
         AND hora_inicio_asignada < $4::time AND hora_fin_asignada > $3::time AND estado=ANY($5::text[])`,
@@ -306,6 +324,7 @@ class MatchingRepository {
         excluded = assignment.id_estudiante;
       }
       const category = categorize(patient);
+      if (category.redFlag && !category.validated) return [];
       const candidates = await this.availableCandidates(
         db,
         patient,
@@ -323,29 +342,31 @@ class MatchingRepository {
     const statesSql = placeholders(1, ACTIVE_ASSIGNMENT_STATES);
     return (
       await db.query(
-        `SELECT p.id
+        `SELECT p.id,p.nombre_completo
          FROM pacientes p
         WHERE p.activo = TRUE AND p.estado = 'pendiente' AND p.edad IS NOT NULL
           AND NOT EXISTS (
             SELECT 1 FROM asignaciones a
              WHERE a.id_paciente = p.id AND a.estado IN (${statesSql})
           )
-        ORDER BY CASE p.prioridad
+        ORDER BY p.ultimo_matching_en ASC NULLS FIRST, CASE p.prioridad
           WHEN 'Muy Alta' THEN 1 WHEN 'Alta' THEN 2 WHEN 'Moderada' THEN 3 ELSE 4
-        END, p.fecha_registro ASC
+        END, p.fecha_registro ASC, p.id
         LIMIT 50`,
         ACTIVE_ASSIGNMENT_STATES
       )
     ).rows;
   }
 
-  async listPending() {
-    const db = await this.database.getConnection();
-    return (
-      await db.query(
-        "SELECT id, nombre_completo, prioridad, tipo_tratamiento_inferido, fecha_registro FROM pacientes WHERE activo = TRUE AND estado = 'pendiente' ORDER BY fecha_registro"
-      )
-    ).rows;
+  recordPending(db, id, reason) {
+    return db.query(
+      "UPDATE pacientes SET ultimo_matching_en=CURRENT_TIMESTAMP,ultimo_motivo_matching=$2 WHERE id=$1 AND activo AND estado='pendiente'",
+      [id, reason]
+    );
+  }
+
+  async recordFailure(id, reason) {
+    await this.recordPending(await this.database.getConnection(), id, reason);
   }
 
   async withMatchingLock(work) {

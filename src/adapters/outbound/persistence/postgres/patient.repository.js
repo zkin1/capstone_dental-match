@@ -1,5 +1,12 @@
 const { appendEvent } = require('./case-history');
 const { ConflictError } = require('../../../../shared/errors/AppError');
+const { ACTIVE_ASSIGNMENT_STATES } = require('../../../../domain/common');
+const { caseQueueOptions } = require('../../../../domain/patients/case-queue');
+const { INFECTION_ALERT, REVIEW_REQUIRED_REASON } = require('../../../../domain/matching/scoring');
+
+const QUEUE_ORDER = `requiere_revision DESC, CASE prioridad
+  WHEN 'Muy Alta' THEN 1 WHEN 'Alta' THEN 2 WHEN 'Moderada' THEN 3 ELSE 4 END,
+  cita_vencida DESC, sin_contactar DESC, (estado='pendiente') DESC, fecha_registro, id::bigint`;
 
 class PatientRepository {
   constructor(database) {
@@ -42,23 +49,58 @@ class PatientRepository {
     });
   }
 
-  async list() {
+  // shortcut: OFFSET supports numbered pages; switch to a cursor if deep pages become slow.
+  async list(query, pendingOnly = false) {
+    const { search, filter, page, pageSize } = caseQueueOptions(query, pendingOnly);
     const db = await this.database.getConnection();
-    return (
-      await db.query(
-        `SELECT p.id, p.nombre_completo, p.edad, p.telefono, p.email, p.ciudad,
-              p.tipo_tratamiento_inferido, p.nivel_dolor, p.prioridad, p.estado,
-              p.fecha_registro, a.id AS asignacion_id,
-              e.nombre_completo AS estudiante_nombre, e.codigo_estudiante AS estudiante_codigo
-         FROM pacientes p
-         LEFT JOIN asignaciones a ON a.id_paciente = p.id
-          AND a.estado IN ('asignado', 'notificado', 'contactado', 'en_tratamiento', 'derivacion_pendiente')
-         LEFT JOIN estudiantes_odontologia e ON e.id = a.id_estudiante
-        WHERE p.activo = TRUE
-        ORDER BY p.fecha_registro DESC
-        LIMIT 200`
-      )
-    ).rows;
+    const { rows: [result] } = await db.query(
+      `WITH queue AS (
+         SELECT p.id::text, p.nombre_completo, p.edad, p.telefono, p.email, p.ciudad,
+                p.tipo_tratamiento_inferido, p.nivel_dolor, p.prioridad, p.estado, p.fecha_registro,
+                a.id::text AS asignacion_id, e.nombre_completo AS estudiante_nombre,
+                e.codigo_estudiante AS estudiante_codigo,
+                COALESCE(a.estado IN ('asignado','notificado'), FALSE) AS sin_contactar,
+                COALESCE(a.estado IN ('asignado','notificado','contactado') AND
+                  (a.fecha_cita + a.hora_fin_asignada) < (CURRENT_TIMESTAMP AT TIME ZONE 'America/Santiago'), FALSE) AS cita_vencida,
+                p.estado='pendiente' AND p.precalificacion_validada IS NULL AND COALESCE(
+                  (COALESCE(p.respuestas_cuestionario, p.sintomas_seleccionados)->>'signos_infeccion' = $5)
+                  OR (p.pre_categorizacion_ia->>'signos_infeccion' = $5), FALSE) AS requiere_revision,
+                CASE WHEN p.estado='pendiente' THEN p.ultimo_motivo_matching END AS motivo_matching,
+                p.ultimo_matching_en
+           FROM pacientes p
+           LEFT JOIN asignaciones a ON a.id_paciente=p.id AND a.estado=ANY($7::text[])
+           LEFT JOIN estudiantes_odontologia e ON e.id=a.id_estudiante
+          WHERE p.activo AND (NOT $6::boolean OR p.estado='pendiente')
+            AND ($1='' OR strpos(lower(concat_ws(' ', p.nombre_completo, p.ciudad,
+               p.tipo_tratamiento_inferido, p.email, p.telefono, 'CASO-' || lpad(p.id::text, GREATEST(6, length(p.id::text)), '0'))), lower($1)) > 0)
+       ), filtered AS (
+         SELECT * FROM queue WHERE CASE $2
+           WHEN 'pendiente' THEN estado='pendiente'
+           WHEN 'revision' THEN requiere_revision
+           WHEN 'sin_contactar' THEN sin_contactar
+           WHEN 'cita_vencida' THEN cita_vencida
+           ELSE TRUE END
+       ), totals AS (
+         SELECT count(*)::int AS total,
+           LEAST($3::int, GREATEST(1, ceil(count(*)::numeric / $4::int)::int)) AS page
+         FROM filtered
+       )
+       SELECT total, page, COALESCE((
+         SELECT jsonb_agg(listed ORDER BY ${QUEUE_ORDER}) FROM (
+           SELECT * FROM filtered ORDER BY ${QUEUE_ORDER}
+           LIMIT $4 OFFSET ((SELECT page FROM totals) - 1) * $4
+         ) listed
+       ), '[]'::jsonb) AS data FROM totals`,
+      [search, filter, page, pageSize, INFECTION_ALERT, pendingOnly, ACTIVE_ASSIGNMENT_STATES]
+    );
+    return {
+      data: result.data.map(row => ({
+        ...row,
+        motivo_matching: row.requiere_revision ? REVIEW_REQUIRED_REASON
+          : row.motivo_matching === REVIEW_REQUIRED_REASON ? null : row.motivo_matching,
+      })),
+      pagination: { total: result.total, page: result.page, pageSize },
+    };
   }
 
   async getStats() {

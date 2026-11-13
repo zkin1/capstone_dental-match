@@ -1,5 +1,6 @@
 const express = require('express');
 const database = require('../../../../infrastructure/database/connection');
+const PatientRepository = require('../../../outbound/persistence/postgres/patient.repository');
 const MatchingRepository = require('../../../outbound/persistence/postgres/matching.repository');
 const triageAgent = require('../../../outbound/ai/triage-agent.adapter');
 const {
@@ -7,7 +8,6 @@ const {
 } = require('../../../../application/matching/matching.service');
 const { authenticateToken, requireRole } = require('../middleware/auth');
 const {
-  AppError,
   ValidationError,
 } = require('../../../../shared/errors/AppError');
 
@@ -15,6 +15,7 @@ const router = express.Router();
 const {
   numericId,
 } = require('../../../../application/assignments/case.service');
+const patients = new PatientRepository(database);
 const matching = createMatchingService(new MatchingRepository(database));
 router.use(authenticateToken, requireRole(['admin', 'coordinator']));
 
@@ -32,7 +33,7 @@ router.get('/stats', async (req, res, next) => {
 
 router.get('/pending', async (req, res, next) => {
   try {
-    res.json({ success: true, data: await matching.listPending() });
+    res.json({ success: true, ...(await patients.list(req.query, true)) });
   } catch (error) {
     next(error);
   }
@@ -62,18 +63,11 @@ router.post('/agent-preview', async (req, res, next) => {
       triageAgent.getStatus(),
       triageAgent.preCategorizar(answers),
     ]);
-    if (!preCategorizacion) {
-      throw new AppError(
-        'El agente no respondió. Intenta nuevamente.',
-        503,
-        'AI_AGENT_UNAVAILABLE'
-      );
-    }
-
     const categoria = matching.scorePatientCategory({
       edad: Number(edad),
       prioridad: 'Moderada',
       pre_categorizacion_ia: preCategorizacion,
+      respuestas_cuestionario: answers,
     });
     res.json({
       success: true,
@@ -85,6 +79,7 @@ router.post('/agent-preview', async (req, res, next) => {
         },
         responseTime: Date.now() - startedAt,
         preCategorizacion,
+        fallback: !preCategorizacion,
         categoria,
       },
     });

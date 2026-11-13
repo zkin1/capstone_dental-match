@@ -9,6 +9,7 @@ function generateToken(user, options = {}) {
     id: user.id,
     email: user.email,
     role: user.role,
+    session_version: user.session_version ?? 0,
     permissions,
     codigo_estudiante: user.codigo_estudiante || null,
     nombre_completo: user.nombre_completo || null,
@@ -22,7 +23,7 @@ function generateToken(user, options = {}) {
 
 function generateRefreshToken(user) {
   if (!process.env.JWT_REFRESH_SECRET) throw new Error('JWT_REFRESH_SECRET no configurado');
-  return jwt.sign({ id: user.id, type: 'refresh' }, process.env.JWT_REFRESH_SECRET, {
+  return jwt.sign({ id: user.id, type: 'refresh', session_version: user.session_version ?? 0 }, process.env.JWT_REFRESH_SECRET, {
     expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
   });
 }

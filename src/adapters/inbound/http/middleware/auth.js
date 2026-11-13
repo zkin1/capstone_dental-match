@@ -37,7 +37,7 @@ async function authenticateToken(req, res, next) {
   }
   try {
     const current = await users.findById(decoded.id);
-    if (!current || current.status !== 'active')
+    if (!current || current.status !== 'active' || (current.session_version ?? 0) !== (decoded.session_version ?? 0))
       throw new AuthenticationError('Cuenta inactiva o sesión inválida');
     req.user = {
       id: current.id,

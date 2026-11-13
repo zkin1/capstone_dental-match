@@ -26,15 +26,44 @@ const publicRegistrationLimit = rateLimit({
 
 router.post('/register', publicRegistrationLimit, async (req, res, next) => {
   try {
-    const result = await service.register(req.body);
+    const result = await service.register(req.body, { approved: false });
     return res.status(201).json({
       success: true,
-      message: 'Registro completado. Ya puedes iniciar sesión.',
+      message: 'Registro recibido. Coordinación debe aprobar tu perfil antes de que puedas iniciar sesión.',
       data: result,
     });
   } catch (error) {
     return next(error);
   }
+});
+
+const studentOnly = [authenticateToken, requireRole('student')];
+
+router.get('/mi-disponibilidad', ...studentOnly, async (req, res, next) => {
+  try {
+    res.json({ success: true, data: await service.availability(req.user.codigo_estudiante) });
+  } catch (error) { next(error); }
+});
+
+router.put('/mi-disponibilidad/horarios/:id', ...studentOnly, async (req, res, next) => {
+  try {
+    await service.updateSchedule(req.user.codigo_estudiante, req.params.id, req.body);
+    res.json({ success: true });
+  } catch (error) { next(error); }
+});
+
+router.put('/mi-disponibilidad/ausencias/:fecha', ...studentOnly, async (req, res, next) => {
+  try {
+    await service.updateAbsence(req.user.codigo_estudiante, req.params.fecha, true);
+    res.json({ success: true });
+  } catch (error) { next(error); }
+});
+
+router.delete('/mi-disponibilidad/ausencias/:fecha', ...studentOnly, async (req, res, next) => {
+  try {
+    await service.updateAbsence(req.user.codigo_estudiante, req.params.fecha, false);
+    res.json({ success: true });
+  } catch (error) { next(error); }
 });
 
 router.post('/', ...staffOnly, async (req, res, next) => {
@@ -58,6 +87,15 @@ router.get('/', ...staffOnly, async (req, res, next) => {
 router.get('/stats', ...staffOnly, async (req, res, next) => {
   try {
     return res.json({ success: true, data: await service.getStats() });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+router.patch('/:id/cuenta', ...staffOnly, async (req, res, next) => {
+  try {
+    const data = await service.setAccountStatus(req.params.id, req.body?.status);
+    return res.json({ success: true, data });
   } catch (error) {
     return next(error);
   }

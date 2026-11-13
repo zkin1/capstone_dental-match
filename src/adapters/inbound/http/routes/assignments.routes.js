@@ -66,6 +66,21 @@ router.get(
     }
   }
 );
+router.get(
+  '/:id/derivacion/candidatos',
+  requireRole(['admin', 'coordinator', 'student']),
+  async (req, res, next) => {
+    try {
+      res.json({
+        success: true,
+        data: await cases.referralCandidates(req.params.id, req.query.especialidad, req.user),
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
 router.post(
   '/:id/derivacion',
   requireRole(['admin', 'coordinator', 'student']),
@@ -102,7 +117,7 @@ router.delete(
     try {
       const result = await service.update(
         req.params.id,
-        { estado: 'cancelado' },
+        { estado: 'cancelado', motivo_cancelacion: req.body?.motivo_cancelacion },
         req.user
       );
       return res.json({ success: true, message: result.message });

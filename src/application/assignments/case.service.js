@@ -1,6 +1,7 @@
 const {
   validateQualification,
 } = require('../../domain/assignments/referral.policy');
+const { SPECIALTIES } = require('../../domain/common');
 const { ValidationError } = require('../../shared/errors/AppError');
 
 function numericId(id) {
@@ -24,12 +25,16 @@ class CaseService {
       user
     );
   }
+  referralCandidates(id, specialty, user) {
+    if (!SPECIALTIES.includes(specialty)) throw new ValidationError('Especialidad inválida');
+    return this.repository.referralCandidates(numericId(id), specialty, user);
+  }
   propose(id, input, user) {
-    return this.repository.propose(
-      numericId(id),
-      validateQualification(input),
-      user
-    );
+    const qualification = validateQualification(input);
+    const receiverId = input.id_estudiante_destino == null || input.id_estudiante_destino === ''
+      ? null
+      : numericId(input.id_estudiante_destino);
+    return this.repository.propose(numericId(id), qualification, user, receiverId);
   }
   listReferrals() {
     return this.repository.listReferrals();

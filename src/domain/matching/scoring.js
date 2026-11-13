@@ -4,6 +4,9 @@ const {
   parseJson,
 } = require('../common');
 
+const INFECTION_ALERT = 'Absceso/Hinchazon con fiebre';
+const REVIEW_REQUIRED_REASON = 'El caso requiere revisión de coordinación por una alerta clínica';
+
 const WEIGHTS = Object.freeze({
   horario: 0.3,
   especialidad: 0.25,
@@ -19,10 +22,9 @@ const CLINICS = Object.freeze({
 });
 
 function scorePatientCategory(patient) {
-  const answers =
-    parseJson(patient.pre_categorizacion_ia, null) ||
-    parseJson(patient.respuestas_cuestionario, null) ||
+  const original = parseJson(patient.respuestas_cuestionario, null) ||
     parseJson(patient.sintomas_seleccionados, {});
+  const answers = parseJson(patient.pre_categorizacion_ia, null) || original;
   const pain = Math.max(
     0,
     Math.min(10, Number(answers.intensidad_dolor ?? patient.nivel_dolor) || 0)
@@ -34,7 +36,7 @@ function scorePatientCategory(patient) {
   let reason = 'Evaluación general';
   let redFlag = false;
 
-  if (answers.signos_infeccion === 'Absceso/Hinchazon con fiebre') {
+  if ([original.signos_infeccion, answers.signos_infeccion].includes(INFECTION_ALERT)) {
     specialty = 'Endodoncia';
     priority = 'Muy Alta';
     reason = 'Signos de infección con fiebre';
@@ -142,7 +144,7 @@ function calculateScore(
   return { score: Math.round(score * 10000) / 10000, factors };
 }
 
-function nextDateFor(day) {
+function nextDateFor(day, weeksLater = 0) {
   const weekdays = [
     'domingo',
     'lunes',
@@ -157,11 +159,13 @@ function nextDateFor(day) {
   const date = new Date();
   let delta = (target - date.getDay() + 7) % 7;
   if (delta === 0) delta = 7;
-  date.setDate(date.getDate() + delta);
+  date.setDate(date.getDate() + delta + weeksLater * 7);
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
 module.exports = {
+  INFECTION_ALERT,
+  REVIEW_REQUIRED_REASON,
   WEIGHTS,
   CLINICS,
   scorePatientCategory,
