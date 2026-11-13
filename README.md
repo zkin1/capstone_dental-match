@@ -23,7 +23,7 @@ La demo cubre:
 - alta pública de pacientes con consentimiento explícito;
 - pre-categorización opcional mediante un agente IA;
 - matching ponderado y explicable;
-- registro público de estudiantes y mantenimiento de sus disponibilidades;
+- registro público de estudiantes sujeto a aprobación de coordinación y mantenimiento de sus disponibilidades;
 - login, roles y sesiones mediante cookies seguras;
 - control de capacidad y carga activa;
 - transiciones de estado de las asignaciones;
@@ -240,7 +240,8 @@ La API rechaza cambios de estado imposibles en vez de corregirlos silenciosament
 - Cada disponibilidad define especialidad, clínica, día, horario y capacidad.
 - `casos_activos` nunca puede superar `casos_necesarios`.
 - Las operaciones de administración pueden activar, desactivar o actualizar un perfil.
-- Un estudiante inactivo no entra al matching aunque conserve datos históricos.
+- Coordinación revisa los perfiles pendientes y aprueba sus especialidades, horarios y cupos desde **Estudiantes**. Las cuentas existentes conservan su estado.
+- Suspender una cuenta corta su sesión y la excluye del matching. Sus casos activos quedan disponibles para seguimiento o reasignación por coordinación.
 
 ## 10. Modelo de datos
 
@@ -293,7 +294,7 @@ La copia desde la base anterior se detiene si el destino ya contiene datos o si 
 2. Se normalizan email, horarios y capacidades.
 3. Se valida que no existan duplicados incompatibles.
 4. Se crean usuario, perfil y disponibilidades en una transacción.
-5. El estudiante queda activo al terminar correctamente el registro; posteriormente staff puede actualizarlo o desactivarlo.
+5. El registro público queda pendiente hasta que coordinación apruebe el perfil. El personal puede crear un perfil activo desde su panel después de verificarlo.
 
 ### Login y sesión
 
@@ -312,6 +313,8 @@ La copia desde la base anterior se detiene si el destino ya contiene datos o si 
 4. Calcula pesos, ordena y persiste el mejor resultado.
 5. Guarda factores y score.
 6. Actualiza capacidad y outbox en la misma transacción.
+
+**Pacientes** y **Matching** incluyen búsqueda, filtros y paginación. La bandeja prioriza las alertas que requieren revisión clínica y conserva el último motivo por el que un caso quedó pendiente.
 
 ## 12. API del BFF
 
@@ -470,10 +473,10 @@ Frontend y backend en paralelo:
 npm run dev:full
 ```
 
-Docker:
+Docker local ejecuta el agente de triaje en modo de reglas, con el LLM desactivado. El agente prepara las respuestas del cuestionario y el BFF aplica la clasificación y el matching.
 
 ```powershell
-docker compose up --build
+docker compose up -d --build --wait
 ```
 
 Variables relevantes:
@@ -485,7 +488,7 @@ DATABASE_URL, DB_SCHEMA, DB_CONNECTION_LIMIT
 MYSQL_SOURCE_URL o MYSQL_SOURCE_HOST, MYSQL_SOURCE_PORT, MYSQL_SOURCE_DATABASE, MYSQL_SOURCE_USER, MYSQL_SOURCE_PASSWORD
 JWT_SECRET, JWT_REFRESH_SECRET, JWT_EXPIRES_IN, JWT_REFRESH_EXPIRES_IN
 AI_AGENT_URL
-LLM_BASE_URL, LLM_API_KEY, LLM_MODEL
+LLM_ENABLED, LLM_BASE_URL, LLM_API_KEY, LLM_MODEL
 ```
 
 El matching masivo mantiene una conexión para el bloqueo de sesión; `DB_CONNECTION_LIMIT` debe ser al menos `2`. Con un pooler externo, usar modo de sesión mientras exista ese bloqueo.
@@ -509,12 +512,12 @@ npm run test:ai-agent
 docker compose config --quiet
 ```
 
-`npm run test:ai-agent` es un chequeo en vivo: consulta `/health` y ejecuta una pre-categorización real contra `AI_AGENT_URL`. No forma parte de `npm test` porque requiere que el agente y su LLM estén levantados.
+`npm run test:ai-agent` es un chequeo en vivo: consulta `/health` y ejecuta una pre-categorización real contra `AI_AGENT_URL`. No forma parte de `npm test` porque requiere que el agente esté levantado.
 
 Con Docker, ejecútalo dentro del contenedor de la app para usar la red interna:
 
 ```powershell
-docker exec dental_matching_ia-app-1 node scripts/check-ai-agent.js
+docker compose exec -T app npm run test:ai-agent
 ```
 
 La validación ejecutada durante la refactorización confirmó:
