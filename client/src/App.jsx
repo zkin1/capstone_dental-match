@@ -11,6 +11,7 @@ import Students from './pages/Students';
 import Matching from './pages/Matching';
 import Assignments from './pages/Assignments';
 import MisAsignaciones from './pages/MisAsignaciones';
+import Availability from './pages/Availability';
 import Landing from './pages/Landing';
 import RegistroPaciente from './pages/RegistroPaciente';
 import RegistroEstudiante from './pages/RegistroEstudiante';
@@ -117,6 +118,14 @@ function AppRoutes() {
           element={
             <RoleRoute roles={['student']}>
               <MisAsignaciones />
+            </RoleRoute>
+          }
+        />
+        <Route
+          path="mi-disponibilidad"
+          element={
+            <RoleRoute roles={['student']}>
+              <Availability />
             </RoleRoute>
           }
         />

@@ -68,6 +68,7 @@ export default function AssignmentsList({ mine = false }) {
           <div>
             {a.dia_semana_asignado} {a.hora_inicio_asignada}
           </div>
+          {a.clinica_asignada && <div>{a.clinica_asignada}</div>}
         </>
       ),
     },

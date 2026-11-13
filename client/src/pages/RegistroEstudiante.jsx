@@ -19,7 +19,7 @@ function RegistroAside() {
           <li><Icon name="check-circle" size={16} /> Horarios claros para facilitar la coordinación.</li>
           <li><Icon name="check-circle" size={16} /> Seguimiento de tus pacientes y asignaciones.</li>
         </ul>
-        <p className="registro-trust">Tu perfil quedará disponible cuando completes toda la información.</p>
+        <p className="registro-trust">Coordinación revisará tu perfil antes de habilitar el acceso a casos.</p>
       </div>
     </aside>
   );
@@ -42,11 +42,11 @@ export default function RegistroEstudiante() {
           {resultado ? (
             <div className="card confirmation-card dm-enter">
               <div className="confirmation-icon"><Icon name="check-circle" size={56} /></div>
-              <h2>¡Listo! Tu perfil está creado.</h2>
+              <h2>Tu perfil está pendiente de aprobación</h2>
               <p>Este es tu código de estudiante:</p>
               <p className="confirmation-code">{resultado.codigo_estudiante}</p>
-              <p className="muted">Ya puedes iniciar sesión con el email y la contraseña que registraste.</p>
-              <Link to="/login" className="btn btn-primary">Iniciar sesión</Link>
+              <p className="muted">Podrás iniciar sesión con tu email y contraseña cuando coordinación apruebe tu perfil.</p>
+              <Link to="/landing" className="btn btn-primary">Volver al inicio</Link>
             </div>
           ) : (
             <>

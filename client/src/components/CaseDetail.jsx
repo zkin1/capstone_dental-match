@@ -8,6 +8,7 @@ import Badge from './Badge';
 import Modal from './Modal';
 import QualificationFields from './QualificationFields';
 import ManualAssignment from './ManualAssignment';
+import ReferralReceiver from './ReferralReceiver';
 import { displayLabel as label } from '../lib/labels';
 
 const NEXT = {
@@ -61,6 +62,7 @@ export default function CaseDetail({
   const [saving, setSaving] = useState(false);
   const [state, setState] = useState('');
   const [note, setNote] = useState('');
+  const [cancellationReason, setCancellationReason] = useState('');
   const [mode, setMode] = useState('');
   const [draft, setDraft] = useState(null);
   const [decision, setDecision] = useState('aprobada');
@@ -94,6 +96,7 @@ export default function CaseDetail({
         toast.info(response.data.matching.reason);
       setMode('');
       setNote('');
+      setCancellationReason('');
       setReviewNote('');
       await load();
       await onChanged?.();
@@ -124,6 +127,7 @@ export default function CaseDetail({
   const nextStates = (NEXT[assignment?.estado] || []).filter(
     (s) => staff || s !== 'notificado'
   );
+  const cancelling = state === 'cancelado' && assignment?.estado !== 'cancelado';
   const activeAssignment =
     assignment &&
     !['derivado', 'completado', 'cancelado', 'derivacion_pendiente'].includes(
@@ -183,6 +187,14 @@ export default function CaseDetail({
                   {assignment.hora_inicio_asignada}–
                   {assignment.hora_fin_asignada}
                 </dd>
+                <dt>Clínica</dt>
+                <dd>{assignment.clinica_asignada || 'Por confirmar con coordinación'}</dd>
+                {assignment.motivo_cancelacion && (
+                  <>
+                    <dt>Motivo de cancelación</dt>
+                    <dd>{assignment.motivo_cancelacion}</dd>
+                  </>
+                )}
               </>
             )}
           </dl>
@@ -199,8 +211,8 @@ export default function CaseDetail({
           />
           {detail.sugerencia.redFlag && (
             <p className="alert" role="status">
-              El cuestionario contiene una alerta clínica que requiere
-              evaluación urgente.
+              El cuestionario contiene una alerta clínica que requiere evaluación urgente.
+              {!detail.validacion && ' Revisa la precalificación antes de asignar este caso.'}
             </p>
           )}
           <Classification
@@ -253,7 +265,8 @@ export default function CaseDetail({
                     'PUT',
                     {
                       estado: state,
-                      ...(note.trim()
+                      ...(cancelling ? { motivo_cancelacion: cancellationReason.trim() } : {}),
+                      ...(!cancelling && note.trim()
                         ? { observaciones_estudiante: note.trim() }
                         : {}),
                     },
@@ -272,18 +285,31 @@ export default function CaseDetail({
                     </option>
                   ))}
                 </Select>
-                <Textarea
-                  label="Nueva nota de seguimiento"
-                  rows={3}
-                  maxLength={2000}
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  hint="Cada nota se conserva en el historial con tu nombre y fecha."
-                />
+                {cancelling ? (
+                  <Textarea
+                    label="Motivo de cancelación"
+                    required
+                    minLength={5}
+                    maxLength={2000}
+                    rows={3}
+                    value={cancellationReason}
+                    onChange={(e) => setCancellationReason(e.target.value)}
+                    hint="El caso volverá a la cola de pacientes pendientes."
+                  />
+                ) : (
+                  <Textarea
+                    label="Nueva nota de seguimiento"
+                    rows={3}
+                    maxLength={2000}
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    hint="Cada nota se conserva en el historial con tu nombre y fecha."
+                  />
+                )}
                 <Button
                   type="submit"
                   loading={saving}
-                  disabled={state === assignment.estado && !note.trim()}
+                  disabled={cancelling ? cancellationReason.trim().length < 5 : state === assignment.estado && !note.trim()}
                 >
                   Guardar seguimiento
                 </Button>
@@ -299,7 +325,7 @@ export default function CaseDetail({
                     openForm('refer', detail.validacion || detail.sugerencia)
                   }
                 >
-                  Registrar derivación
+                  Derivar caso
                 </Button>
               )}
             {staff && !pending && patient.activo && (
@@ -319,6 +345,7 @@ export default function CaseDetail({
             )}
             {staff &&
               patient.activo &&
+              (!detail.sugerencia.redFlag || detail.validacion) &&
               (manualAssignment || patient.estado === 'pendiente') && (
                 <Button variant="secondary" onClick={() => setMode('manual')}>
                   {manualAssignment
@@ -335,6 +362,7 @@ export default function CaseDetail({
                 {pending.propuesta.priority}
               </p>
               <p>{pending.propuesta.reason}</p>
+              {pending.propuesta.receptor && <p>Receptor propuesto: {pending.propuesta.receptor.nombre}</p>}
               <p>
                 El cupo de origen se conserva hasta que el personal revise la
                 propuesta.
@@ -386,14 +414,29 @@ export default function CaseDetail({
                     value={decision}
                     onChange={(e) => setDecision(e.target.value)}
                   >
-                    <option value="aprobada">Aprobar y buscar receptor</option>
+                    <option value="aprobada">
+                      {pending.propuesta.receptor ? 'Aprobar con el receptor propuesto' : 'Aprobar y buscar receptor'}
+                    </option>
                     <option value="rechazada">
                       Rechazar y devolver al seguimiento
                     </option>
                   </Select>
                 )}
                 {(mode !== 'review' || decision === 'aprobada') && (
-                  <QualificationFields value={draft} onChange={setDraft} />
+                  <QualificationFields value={draft} onChange={(updated) => setDraft(
+                    updated.specialty === draft.specialty
+                      ? updated
+                      : { ...updated, id_estudiante_destino: '' }
+                  )} />
+                )}
+                {mode === 'refer' && (
+                  <ReferralReceiver
+                    key={assignment.id + ':' + draft.specialty}
+                    assignmentId={assignment.id}
+                    specialty={draft.specialty}
+                    value={draft.id_estudiante_destino || ''}
+                    onChange={(id) => setDraft(currentDraft => ({ ...currentDraft, id_estudiante_destino: id }))}
+                  />
                 )}
                 {mode === 'review' && (
                   <Textarea

@@ -9,8 +9,15 @@ import Badge from '../components/Badge';
 import Table from '../components/Table';
 import EmptyState from '../components/EmptyState';
 import Skeleton from '../components/Skeleton';
-import Modal from '../components/Modal';
+import Modal, { ConfirmModal } from '../components/Modal';
 import StudentRegistrationForm from '../components/StudentRegistrationForm';
+
+const ACCOUNT_LABEL = {
+  pending: 'Pendiente de aprobación', active: 'Activa', suspended: 'Suspendida', inactive: 'Inactiva',
+};
+const ACCOUNT_ACTION = {
+  pending: 'Aprobar', active: 'Suspender', suspended: 'Reactivar', inactive: 'Reactivar',
+};
 
 const CITIES = ['Metropolitana', 'Valparaíso', 'Concepción'];
 
@@ -23,6 +30,7 @@ export default function Students() {
   const [editing, setEditing] = useState(null);
   const [creating, setCreating] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [accountChange, setAccountChange] = useState(null);
   const toast = useToast();
 
   async function loadStudents() {
@@ -53,7 +61,6 @@ export default function Students() {
           universidad: editing.universidad,
           ciudad: editing.ciudad,
           casos_necesarios: Number(editing.casos_necesarios),
-          estado: editing.estado,
         }),
       });
       toast.success('Estudiante actualizado');
@@ -66,19 +73,48 @@ export default function Students() {
     }
   }
 
+  async function changeAccount() {
+    const { id, cuenta_estado } = accountChange;
+    const status = cuenta_estado === 'active' ? 'suspended' : 'active';
+    setSaving(true);
+    try {
+      await apiFetch(`/estudiantes/${id}/cuenta`, {
+        method: 'PATCH', body: JSON.stringify({ status }),
+      });
+      setAccountChange(null);
+      setViewing(null);
+      toast.success(status === 'suspended' ? 'Cuenta suspendida' : 'Cuenta activa');
+      await loadStudents();
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   const columns = [
     { key: 'nombre', label: 'Nombre', render: student => student.nombre_completo },
     { key: 'codigo', label: 'Código', render: student => student.codigo_estudiante },
     { key: 'año', label: 'Año', render: student => student.año_carrera },
     { key: 'especialidades', label: 'Especialidades', render: student => student.especialidades || '-' },
     { key: 'casos', label: 'Carga', render: student => `${student.casos_activos}/${student.casos_necesarios}` },
-    { key: 'estado', label: 'Estado', render: student => <Badge value={student.estado} /> },
+    { key: 'estado', label: 'Cuenta', render: student =>
+      <Badge value={student.cuenta_estado === 'pending' ? 'pendiente' : student.cuenta_estado}>
+        {ACCOUNT_LABEL[student.cuenta_estado] || 'Sin cuenta de estudiante'}
+      </Badge> },
     {
       key: 'acciones', label: 'Acciones',
       render: student => (
         <div className="table-actions">
           <Button variant="ghost" size="sm" icon="eye" onClick={() => setViewing(student)} aria-label={`Ver a ${student.nombre_completo}`} />
           <Button variant="ghost" size="sm" icon="pencil" onClick={() => setEditing({ ...student })} aria-label={`Editar a ${student.nombre_completo}`} />
+          {ACCOUNT_ACTION[student.cuenta_estado] && (
+            <Button variant="secondary" size="sm"
+              onClick={() => student.cuenta_estado === 'pending' ? setViewing(student) : setAccountChange(student)}
+              aria-label={`${ACCOUNT_ACTION[student.cuenta_estado]} a ${student.nombre_completo}`}>
+              {student.cuenta_estado === 'pending' ? 'Revisar y aprobar' : ACCOUNT_ACTION[student.cuenta_estado]}
+            </Button>
+          )}
         </div>
       ),
     },
@@ -132,8 +168,26 @@ export default function Students() {
             <p><strong>Casos activos:</strong> {viewing.casos_activos}/{viewing.casos_necesarios}</p>
             <p><strong>Casos completados:</strong> {viewing.casos_completados}</p>
           </div>
+          <h3>Horarios y cupos</h3>
+          <Table caption="Horarios del estudiante" rows={viewing.horarios} columns={[
+            { key: 'especialidad', label: 'Especialidad' }, { key: 'dia', label: 'Día' },
+            { key: 'horario', label: 'Horario', render: row => `${row.inicio.slice(0, 5)}–${row.fin.slice(0, 5)}` },
+            { key: 'capacidad', label: 'Cupos' },
+          ]} />
+          {viewing.cuenta_estado === 'pending' && (
+            <Button onClick={() => { setAccountChange(viewing); setViewing(null); }}>Aprobar cuenta</Button>
+          )}
         </Modal>
       )}
+
+      <ConfirmModal open={Boolean(accountChange)}
+        title={accountChange ? `${ACCOUNT_ACTION[accountChange.cuenta_estado]} cuenta` : ''}
+        message={accountChange?.cuenta_estado === 'active'
+          ? `Suspender a ${accountChange.nombre_completo} corta sus sesiones y lo excluye de nuevas asignaciones. Coordinación conserva los casos activos para seguimiento o reasignación.`
+          : `Confirma que revisaste el perfil, sus especialidades, horarios y cupos. ${accountChange?.nombre_completo || ''} podrá iniciar sesión y recibir casos.`}
+        confirmLabel={ACCOUNT_ACTION[accountChange?.cuenta_estado]}
+        loading={saving} onConfirm={changeAccount} onClose={() => setAccountChange(null)}
+      />
 
       {editing && (
         <Modal
@@ -154,9 +208,6 @@ export default function Students() {
               {CITIES.map(city => <option key={city} value={city}>{city}</option>)}
             </Select>
             <Input label="Carga máxima" type="number" min="1" max="50" value={editing.casos_necesarios} onChange={event => setEditing({ ...editing, casos_necesarios: event.target.value })} />
-            <Select label="Estado" value={editing.estado} onChange={event => setEditing({ ...editing, estado: event.target.value })}>
-              <option value="activo">Activo</option><option value="inactivo">Inactivo</option>
-            </Select>
           </form>
         </Modal>
       )}

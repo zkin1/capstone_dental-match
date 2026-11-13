@@ -42,6 +42,7 @@ export default function Layout() {
           icon: 'clipboard',
           label: 'Mis Asignaciones',
         },
+        { to: '/mi-disponibilidad', icon: 'clipboard', label: 'Mi disponibilidad' },
       ]
     : [
         { to: '/', icon: 'chart', label: 'Dashboard', end: true },

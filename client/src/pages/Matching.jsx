@@ -7,11 +7,14 @@ import Button from '../components/Button';
 import Icon from '../components/Icon';
 import Badge from '../components/Badge';
 import Table from '../components/Table';
-import EmptyState from '../components/EmptyState';
+import CaseQueue from '../components/CaseQueue';
+import CaseDetail from '../components/CaseDetail';
 
 export default function Matching() {
   usePageTitle('Matching');
   const [results, setResults] = useState(null);
+  const [viewing, setViewing] = useState(null);
+  const [revision, setRevision] = useState(0);
   const [loading, setLoading] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [error, setError] = useState('');
@@ -24,6 +27,7 @@ export default function Matching() {
     try {
       const data = await apiFetch('/matching/auto', { method: 'POST' });
       setResults(data.data);
+      refreshQueue();
       const matched = data.data?.matched ?? 0;
       toast.success(`Matching completado: ${matched} asignaciones creadas`);
     } catch (err) {
@@ -34,6 +38,7 @@ export default function Matching() {
     }
   }
 
+  const refreshQueue = () => setRevision(value => value + 1);
   const rows = results?.matches || [];
   const columns = [
     { key: 'paciente', label: 'Paciente', render: r => r.paciente || r.patient_name || '-' },
@@ -41,7 +46,8 @@ export default function Matching() {
     { key: 'especialidad', label: 'Especialidad' },
     { key: 'horario', label: 'Horario' },
     { key: 'score', label: 'Compatibilidad', render: r => (r.score ? `${Math.round(r.score * 100)}%` : '-') },
-    { key: 'estado', label: 'Estado', render: () => <Badge value="asignado" /> },
+    { key: 'motivo', label: 'Motivo', render: r => r.factors?.motivo_reparto || '—' },
+    { key: 'estado', label: 'Estado', render: () => <Badge value="asignado">Asignado</Badge> },
   ];
 
   function exportCSV() {
@@ -119,20 +125,28 @@ export default function Matching() {
           )}
           {results.unmatched > 0 && (
             <div className="alert" role="status"><Icon name="warning" size={18} />
-              {results.unmatched} caso(s) siguen pendientes por falta de especialidad, capacidad u horario compatible.
+              {results.unmatched} caso(s) no se asignaron en esta ejecución.
             </div>
           )}
+          <Table caption="Casos sin asignar en esta ejecución" rows={results.failures}
+            keyFn={row => row.patientId}
+            columns={[
+              { key: 'paciente', label: 'Paciente' },
+              { key: 'reason', label: 'Motivo' },
+              { key: 'acciones', label: 'Acciones', render: row =>
+                <Button variant="secondary" size="sm" onClick={() => setViewing(row.patientId)}>Ver caso</Button> },
+            ]} />
         </div>
       )}
 
-      {!results && !loading && (
-        <EmptyState
-          icon="chart"
-          title="Empareja pacientes con estudiantes"
-          description="El algoritmo considera: horario (30%), tratamiento (25%), carga (20%), urgencia (15%), dolor (5%), experiencia (5%)."
-          action={<Button onClick={() => setConfirmOpen(true)} icon="chart">Ejecutar matching</Button>}
-        />
-      )}
+      <h2 className="form-section-title">Casos pendientes</h2>
+      <CaseQueue endpoint="/matching/pending" pendingOnly revision={revision} columns={[
+        { key: 'tipo_tratamiento_inferido', label: 'Especialidad' },
+        { key: 'acciones', label: 'Acciones', render: row =>
+          <Button variant="secondary" size="sm" onClick={() => setViewing(row.id)}>Ver caso</Button> },
+      ]} />
+      {viewing && <CaseDetail key={viewing} patientId={viewing}
+        onClose={() => setViewing(null)} onChanged={refreshQueue} />}
     </div>
   );
 }

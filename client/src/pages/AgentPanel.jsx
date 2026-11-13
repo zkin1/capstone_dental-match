@@ -83,7 +83,8 @@ export default function AgentPanel() {
     }
   }
 
-  const comparisonRows = result ? FIELDS.map(([key, label]) => ({
+  const rulesMode = result?.agent.mode === 'rules';
+  const comparisonRows = result?.preCategorizacion ? FIELDS.map(([key, label]) => ({
     key, label, input: input[key], output: result.preCategorizacion[key],
   })) : [];
 
@@ -92,12 +93,12 @@ export default function AgentPanel() {
       <div className="page-header">
         <div>
           <h1>Agente IA</h1>
-          <p className="page-subtitle">Prueba la pre-categorización y separa claramente IA, reglas clínicas y matching.</p>
+          <p className="page-subtitle">Prueba cómo el agente prepara el cuestionario y cómo se clasifica el caso.</p>
         </div>
       </div>
 
       <section className="card agent-explainer">
-        <div><Icon name="robot" size={24} /><strong>Gemini organiza</strong><span>Normaliza 23 respuestas del triaje.</span></div>
+        <div><Icon name="robot" size={24} /><strong>El agente organiza</strong><span>Normaliza 23 respuestas del triaje.</span></div>
         <div><Icon name="shield" size={24} /><strong>Las reglas deciden</strong><span>Especialidad, prioridad y alertas son deterministas.</span></div>
         <div><Icon name="link" size={24} /><strong>El matching asigna</strong><span>Compara horario, especialidad, carga y urgencia.</span></div>
       </section>
@@ -110,21 +111,24 @@ export default function AgentPanel() {
           </Select>
           <p className="agent-case"><strong>Paciente ficticio, {selected.edad} años:</strong> {selected.description}</p>
           <Button onClick={analyze} loading={loading} icon="sparkles" className="btn-block">
-            {loading ? 'Consultando a Gemini…' : 'Analizar con el agente'}
+            {loading ? 'Consultando al agente…' : 'Analizar con el agente'}
           </Button>
           {error && <div className="alert agent-error" role="alert"><Icon name="warning" size={18} />{error}</div>}
         </section>
 
         <section className="card agent-result" aria-live="polite">
           <h2>Resultado</h2>
-          {!result && <p className="muted">Ejecuta un escenario para ver proveedor, latencia, salida de IA y decisión clínica.</p>}
+          {!result && <p className="muted">Ejecuta un escenario para ver la clasificación y el tiempo de respuesta.</p>}
           {result && (
             <>
               <div className="agent-meta">
-                <Badge value="activo">{result.agent.provider}</Badge>
-                <span>{result.agent.model}</span>
+                <Badge value={result.fallback ? 'pendiente' : 'activo'}>
+                  {rulesMode ? 'Modo sin LLM' : result.agent.provider}
+                </Badge>
+                {result.agent.model && <span>{result.agent.model}</span>}
                 <span>{result.responseTime} ms</span>
               </div>
+              {result.fallback && <p role="status">El agente no completó el análisis. Se aplicaron las reglas de triaje a las respuestas originales.</p>}
               <dl className="agent-decision">
                 <div><dt>Especialidad</dt><dd>{result.categoria.specialty}</dd></div>
                 <div><dt>Prioridad</dt><dd><Badge value={result.categoria.priority} /></dd></div>
@@ -136,13 +140,13 @@ export default function AgentPanel() {
         </section>
       </div>
 
-      {result && (
+      {result?.preCategorizacion && (
         <section className="agent-section">
           <h2>Entrada comparada con la salida del agente</h2>
           <Table caption="Comparación del agente" rows={comparisonRows} keyFn={row => row.key} columns={[
             { key: 'label', label: 'Dato' },
             { key: 'input', label: 'Entrada' },
-            { key: 'output', label: 'Salida IA' },
+            { key: 'output', label: rulesMode ? 'Respuesta del agente' : 'Salida IA' },
           ]} />
         </section>
       )}

@@ -14,6 +14,7 @@ const LABELS = {
   coordinator: 'Coordinador',
   student: 'Estudiante',
   system: 'Sistema',
+  pending: 'Pendiente de aprobación',
   active: 'Activa',
   inactive: 'Inactiva',
   suspended: 'Suspendida',

@@ -116,6 +116,7 @@ export default function RegistroPaciente() {
                 <p>Se te ha asignado al estudiante:</p>
                 <p className="assignment-name">{resultado.estudianteAsignado.nombre}</p>
                 <p className="assignment-code">Código: {resultado.estudianteAsignado.codigo}</p>
+                {resultado.estudianteAsignado.clinica && <p>Clínica: {resultado.estudianteAsignado.clinica}</p>}
                 <p className="muted">Cita propuesta: {resultado.estudianteAsignado.fecha} · {resultado.estudianteAsignado.horario}. Te contactarán para confirmarla.</p>
               </div>
             ) : (

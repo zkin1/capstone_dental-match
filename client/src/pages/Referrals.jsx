@@ -44,6 +44,7 @@ export default function Referrals() {
           <div>
             {d.propuesta.specialty} · {d.propuesta.priority}
           </div>
+          {d.propuesta.receptor && <div>Receptor propuesto: {d.propuesta.receptor.nombre}</div>}
         </>
       ),
     },
@@ -90,8 +91,8 @@ export default function Referrals() {
         </Button>
       </div>
       <p>
-        El reparto de casos derivados prioriza menor carga. A igual carga,
-        considera más derivaciones aprobadas y luego compatibilidad.
+        Si no se propone un receptor, el reparto prioriza menor carga y, a igual carga,
+        más derivaciones aprobadas y luego compatibilidad.
       </p>
       {error && (
         <p className="alert" role="alert">

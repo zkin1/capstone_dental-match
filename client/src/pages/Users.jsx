@@ -67,7 +67,7 @@ export default function Users() {
     {
       key: 'acciones',
       label: 'Acciones',
-      render: (u) => (
+      render: (u) => u.status === 'pending' ? <Link to="/students">Revisar perfil</Link> : (
         <Button
           variant="secondary"
           size="sm"

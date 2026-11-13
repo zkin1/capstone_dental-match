@@ -1,15 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { apiFetch } from '../lib/api';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { useToast } from '../components/toastContext';
 import { Input, Select, Textarea } from '../components/Field';
 import Modal, { ConfirmModal } from '../components/Modal';
 import Button from '../components/Button';
-import Icon from '../components/Icon';
-import Badge from '../components/Badge';
-import Table from '../components/Table';
-import EmptyState from '../components/EmptyState';
-import Skeleton from '../components/Skeleton';
+import CaseQueue from '../components/CaseQueue';
 import CaseDetail from '../components/CaseDetail';
 
 const SPECIALTIES = [
@@ -38,9 +34,7 @@ const EMPTY_FORM = {
 
 export default function Patients() {
   usePageTitle('Pacientes');
-  const [patients, setPatients] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [revision, setRevision] = useState(0);
   const [form, setForm] = useState(EMPTY_FORM);
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -50,21 +44,7 @@ export default function Patients() {
   const [deleting, setDeleting] = useState(null);
   const toast = useToast();
 
-  async function loadPatients() {
-    try {
-      setError('');
-      const data = await apiFetch('/pacientes');
-      setPatients(data.data || []);
-    } catch (err) {
-      setError('No se pudieron cargar los pacientes: ' + err.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    loadPatients();
-  }, []);
+  const refreshQueue = () => setRevision(value => value + 1);
 
   async function createPatient(event) {
     event.preventDefault();
@@ -77,7 +57,7 @@ export default function Patients() {
       toast.success('Paciente registrado como pendiente');
       setForm(EMPTY_FORM);
       setShowForm(false);
-      await loadPatients();
+      refreshQueue();
     } catch (err) {
       toast.error('Error al registrar: ' + err.message);
     } finally {
@@ -104,7 +84,7 @@ export default function Patients() {
       });
       toast.success('Paciente actualizado');
       setEditing(null);
-      await loadPatients();
+      refreshQueue();
     } catch (err) {
       toast.error('Error al actualizar: ' + err.message);
     } finally {
@@ -118,7 +98,7 @@ export default function Patients() {
       await apiFetch(`/pacientes/${deleting.id}`, { method: 'DELETE' });
       toast.success('Paciente desactivado');
       setDeleting(null);
-      await loadPatients();
+      refreshQueue();
     } catch (err) {
       toast.error('Error al desactivar: ' + err.message);
       setDeleting((current) => ({ ...current, loading: false }));
@@ -126,26 +106,11 @@ export default function Patients() {
   }
 
   const columns = [
-    {
-      key: 'nombre',
-      label: 'Nombre',
-      render: (patient) => patient.nombre_completo,
-    },
     { key: 'ciudad', label: 'Ciudad' },
     {
       key: 'tratamiento',
       label: 'Especialidad',
       render: (patient) => patient.tipo_tratamiento_inferido || '-',
-    },
-    {
-      key: 'prioridad',
-      label: 'Prioridad',
-      render: (patient) => <Badge value={patient.prioridad} />,
-    },
-    {
-      key: 'estado',
-      label: 'Estado',
-      render: (patient) => <Badge value={patient.estado} />,
     },
     {
       key: 'estudiante',
@@ -290,12 +255,6 @@ export default function Patients() {
           {showForm ? 'Cancelar' : 'Nuevo paciente'}
         </Button>
       </div>
-      {error && (
-        <div className="alert" role="alert">
-          <Icon name="warning" size={18} />
-          {error}
-        </div>
-      )}
 
       {showForm && (
         <form className="card form-card dm-enter" onSubmit={createPatient}>
@@ -317,35 +276,14 @@ export default function Patients() {
         </form>
       )}
 
-      {loading ? (
-        <>
-          <span className="visually-hidden" role="status">
-            Cargando pacientes…
-          </span>
-          <Skeleton variant="table" rows={5} />
-        </>
-      ) : (
-        <Table
-          caption="Listado de pacientes"
-          columns={columns}
-          rows={patients}
-          keyFn={(patient) => patient.id}
-          empty={
-            <EmptyState
-              icon="users"
-              title="No hay pacientes registrados"
-              description="Registra el primer caso para comenzar."
-            />
-          }
-        />
-      )}
+      <CaseQueue endpoint="/pacientes" revision={revision} columns={columns} />
 
       {viewing && (
         <CaseDetail
           key={viewing.id}
           patientId={viewing.id}
           onClose={() => setViewing(null)}
-          onChanged={loadPatients}
+          onChanged={refreshQueue}
         />
       )}
 
