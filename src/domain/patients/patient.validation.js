@@ -5,6 +5,9 @@ function validateBasePatient(input) {
   if (!input.nombre_completo?.trim() || !input.telefono?.trim() || !CITIES.includes(input.ciudad)) {
     return { error: 'Nombre, teléfono y una ciudad válida son obligatorios' };
   }
+  if (!/^\+?[0-9]{8,15}$/.test(input.telefono.trim())) {
+  return { error: 'El teléfono debe tener entre 8 y 15 dígitos y puede comenzar con +' };
+  }
   if (!Number.isInteger(age) || age < 1 || age > 120) {
     return { error: 'La edad debe estar entre 1 y 120 años' };
   }

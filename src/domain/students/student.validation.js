@@ -13,6 +13,11 @@ function validateStudent(input, publicRegistration = false) {
       return `El campo ${field} debe ser un texto de hasta ${limit} caracteres`;
     }
   }
+  const telefono = input.telefono?.trim();
+  if (telefono && !/^\+?[0-9]{8,15}$/.test(telefono)) {
+    return 'El teléfono debe tener entre 8 y 15 dígitos y puede comenzar con +';
+  }
+  
   const required = ['nombre_completo', 'email', 'ciudad', 'año_carrera'];
   if (publicRegistration) required.push('password');
   if (required.some(field => !String(input[field] || '').trim())) {

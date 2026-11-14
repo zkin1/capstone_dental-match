@@ -112,15 +112,14 @@ export default function StudentRegistrationForm({ staff = false, onCreated }) {
               value={form.password} onChange={e => set('password', e.target.value)} />
             <Input label="Confirmar contraseña" type="password" required minLength={8} autoComplete="new-password"
               value={form.confirmPassword} onChange={e => set('confirmPassword', e.target.value)} />
-            <Input label="Teléfono" value={form.telefono} onChange={e => set('telefono', e.target.value)} />
+            <Input label="Teléfono" type="tel" minLength={8} maxLength={16} pattern="[+]?[0-9]{8,15}" title="Ingresa de 8 a 15 dígitos; puedes anteponer +. Sin espacios ni letras." value={form.telefono} onChange={e => set('telefono', e.target.value)} />
             <Select label="Año de carrera" required value={form.año_carrera} onChange={e => set('año_carrera', e.target.value)}>
               <option value="4to">4to</option>
               <option value="5to">5to</option>
             </Select>
             <Input label="Universidad" placeholder="Nombre de tu universidad" value={form.universidad} onChange={e => set('universidad', e.target.value)} />
             <Select label="Ciudad" required value={form.ciudad} onChange={e => set('ciudad', e.target.value)}>
-              <option value="Metropolitana">Metropolitana</option>
-              <option value="" disabled>Selecciona tu Comuna</option>
+              <option value="" disabled>Selecciona una ciudad</option>
               <option value="Metropolitana">Santiago</option>
               <option value="Valparaíso">Valparaíso</option>
               <option value="Concepción">Concepción</option>
