@@ -198,7 +198,23 @@ async function run() {
       await caseDialog.locator('.case-history').getByText(note, { exact: true }).waitFor();
       assert.equal(await caseDialog.getByLabel('Estado del caso', { exact: true }).inputValue(), state);
     };
-    await followUp(originPage, assignmentId, 'contactado', 'Revisé el caso y contacté al paciente sintético');
+    await originCase.getByText('Para derivar este caso, registra primero que contactaste al paciente.').waitFor();
+    await originCase.getByLabel('Resultado de contacto', { exact: true }).selectOption('pide_reprogramar');
+    await originCase.getByLabel(/^Motivo del seguimiento/).fill('El caso ficticio requiere un nuevo horario');
+    const nextDate = new Date(Date.now() + 86400_000 * 7).toISOString().slice(0, 10);
+    await originCase.getByLabel('Próxima fecha de seguimiento', { exact: true }).fill(nextDate);
+    await originCase.getByLabel('Fecha acordada', { exact: true }).fill(nextDate);
+    await originCase.getByRole('button', { name: 'Guardar seguimiento', exact: true }).click();
+    await originCase.locator('.case-history').getByText('Pide reprogramar', { exact: true }).waitFor();
+    assert.equal(await originCase.getByLabel('Estado del caso', { exact: true }).inputValue(), 'contactado');
+    const event = await server.database.executeQuery(
+      "SELECT datos->'seguimiento' AS datos FROM historial_paciente WHERE id_asignacion=$1 AND tipo='seguimiento_paciente'",
+      [assignmentId]
+    );
+    assert.deepEqual(event.rows[0].datos, {
+      resultado: 'pide_reprogramar', motivo: 'El caso ficticio requiere un nuevo horario',
+      proxima_fecha: nextDate, fecha_acordada: nextDate,
+    });
     await originCase.getByRole('button', { name: 'Derivar caso', exact: true }).click();
     await originCase.getByLabel(/^Especialidad de destino/).selectOption('Endodoncia');
     await originCase.getByLabel(/^Prioridad/).selectOption('Alta');
@@ -217,6 +233,10 @@ async function run() {
     adminCase = adminPage.getByRole('dialog', { name: 'Detalle del caso' });
     await adminCase.getByRole('button', { name: 'Revisar derivación', exact: true }).click();
     await adminCase.getByLabel('Decisión', { exact: true }).selectOption('aprobada');
+    const receiverOptions = adminCase.getByLabel('Estudiante receptor', { exact: true });
+    await receiverOptions.locator('option').filter({ hasText: 'Estudiante creado por coordinador' }).waitFor({ state: 'attached' });
+    await receiverOptions.selectOption({ label: await receiverOptions.locator('option')
+      .filter({ hasText: 'Estudiante creado por coordinador' }).innerText() });
     await adminCase.getByLabel(/^Motivo de la revisión/).fill('El administrador confirma el tratamiento después de revisar la propuesta');
     const approvedResponse = adminPage.waitForResponse(response => response.url() === `${server.base}/api/derivaciones/${referralId}/revision` && response.request().method() === 'POST' && response.status() === 200);
     await adminCase.getByRole('button', { name: 'Guardar revisión', exact: true }).click();
@@ -227,7 +247,7 @@ async function run() {
       'Estudiante creado por coordinador': 'coord-student@example.com',
       'Estudiante registro público': 'public-student@example.com',
     }[approved.matching.estudiante];
-    assert(receiverEmail, 'El receptor debe ser compatible y distinto al origen');
+    assert.equal(receiverEmail, 'coord-student@example.com', 'Se asigna al receptor elegido por coordinación');
 
     const receiverPage = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
     receiverPage.on('pageerror', error => errors.push(error.message));
@@ -248,10 +268,11 @@ async function run() {
     const loads = await server.database.executeQuery('SELECT casos_activos FROM estudiantes_odontologia');
     assert(loads.rows.every(row => row.casos_activos === 0));
     checks.push('E2E clínico completo por interfaz: admin crea/asigna paciente → estudiante revisa contacto y deriva → admin aprueba → receptor contacta, trata y completa; historial y cupos confirmados en PostgreSQL');
-    await server.database.executeQuery(`INSERT INTO pacientes(nombre_completo,edad,telefono,ciudad,prioridad,respuestas_cuestionario)
+    await server.database.executeQuery(`INSERT INTO pacientes(nombre_completo,edad,telefono,ciudad,prioridad,respuestas_cuestionario,motivo_revision_triaje)
       SELECT 'Bandeja E2E ' || n, 30, '900000003', 'Valparaíso',
         CASE WHEN n=22 THEN 'Muy Alta' ELSE 'Moderada' END,
-        CASE WHEN n=22 THEN '{"signos_infeccion":"Absceso/Hinchazon con fiebre"}'::jsonb ELSE '{}'::jsonb END
+        CASE WHEN n=22 THEN '{"signos_infeccion":"Absceso/Hinchazon con fiebre"}'::jsonb ELSE '{}'::jsonb END,
+        CASE WHEN n=22 THEN 'El caso requiere revisión de coordinación por una alerta clínica' END
       FROM generate_series(1,22) n`);
     await coord.goto(server.base + '/patients');
     await coord.getByLabel('Buscar casos').fill('Bandeja E2E');

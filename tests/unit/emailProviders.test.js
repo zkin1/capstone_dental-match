@@ -82,6 +82,8 @@ test.each([
       .catch((e) => e);
     expect(error.uncertain).toBe(uncertain);
     expect(error.message).not.toContain('detalle privado');
+    if (details.code === 'EAUTH') expect(error.message).toMatch(/SMTP 535.*contraseña de aplicación/);
+    if (details.command === 'CONN') expect(error.message).toMatch(/conexión SMTP/);
   }
 );
 

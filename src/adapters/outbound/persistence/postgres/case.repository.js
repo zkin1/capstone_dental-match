@@ -62,9 +62,12 @@ class CaseRepository {
       [id]
     );
     // Compute the suggestion without replacing it with the staff's validated decision.
-    const suggestion =
-      parseJson(patient.precalificacion_sugerida) ||
-      scorePatientCategory({ ...patient, precalificacion_validada: null });
+    const safety = scorePatientCategory({ ...patient, precalificacion_validada: null });
+    const suggestion = {
+      ...(parseJson(patient.precalificacion_sugerida) || safety),
+      redFlag: safety.redFlag,
+      reviewReason: safety.reviewReason,
+    };
     return {
       paciente: patient,
       asignacion: assignment,
@@ -165,7 +168,8 @@ class CaseRepository {
   referralCandidates(assignmentId, specialty, user) {
     return this.database.transaction(async db => {
       const assignment = await lockAssignment(db, assignmentId);
-      canRefer(assignment, user);
+      if (user.role === 'student' || assignment.estado !== 'derivacion_pendiente')
+        canRefer(assignment, user);
       return this.compatibleReceivers(db, assignment, specialty);
     });
   }
@@ -229,7 +233,7 @@ class CaseRepository {
     ).rows;
   }
 
-  async review(referralId, decision, qualification, reason, user) {
+  async review(referralId, decision, qualification, reason, user, receiverId) {
     return this.database.transaction(async (db) => {
       const lookup = (
         await db.query(
@@ -253,6 +257,20 @@ class CaseRepository {
         );
       }
       const approved = decision === 'aprobada';
+      let receiver = null;
+      if (approved) {
+        const proposed = parseJson(referral.propuesta);
+        const selected = receiverId === undefined && proposed?.specialty === qualification.specialty
+          ? proposed.receptor?.id
+          : receiverId;
+        if (selected) {
+          const candidates = await this.compatibleReceivers(db, assignment, qualification.specialty);
+          const candidate = candidates.find(item => String(item.id) === String(selected));
+          if (!candidate)
+            throw new ConflictError('El receptor elegido ya no cumple los requisitos. Cambia el receptor o selecciona reparto automático.');
+          receiver = { id: candidate.id, nombre: candidate.nombre };
+        }
+      }
       const nextState = approved ? 'derivado' : referral.estado_anterior;
       const validated = approved
         ? {
@@ -260,6 +278,7 @@ class CaseRepository {
             reviewer: user.nombre_completo,
             reviewedAt: new Date().toISOString(),
             referralId,
+            receptor: receiver,
           }
         : null;
       await db.query(

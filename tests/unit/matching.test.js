@@ -77,6 +77,14 @@ describe('matching determinista ponderado', () => {
     });
   });
 
+  test('la respuesta original sostiene la alerta aunque la normalización la omita', () => {
+    expect(scorePatientCategory({
+      edad: 30,
+      respuestas_cuestionario: { signos_infeccion: ' Absceso / Hinchazón con fiebre ' },
+      pre_categorizacion_ia: { signos_infeccion: 'Ninguno' },
+    })).toMatchObject({ redFlag: true, priority: 'Muy Alta', reviewReason: expect.stringMatching(/alerta clínica/) });
+  });
+
   test('los menores se derivan a odontopediatría sin intervención del LLM', () => {
     expect(
       scorePatientCategory({ edad: 10, respuestas_cuestionario: {} }).specialty

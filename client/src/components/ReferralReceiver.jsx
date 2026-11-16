@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { apiFetch } from '../lib/api';
 import { Select } from './Field';
 
-export default function ReferralReceiver({ assignmentId, specialty, value, onChange }) {
+export default function ReferralReceiver({ assignmentId, specialty, value, onChange, reviewing }) {
   const [students, setStudents] = useState(null);
   const [error, setError] = useState('');
 
@@ -17,15 +17,18 @@ export default function ReferralReceiver({ assignmentId, specialty, value, onCha
 
   if (error) return <p className="alert" role="alert">{error}</p>;
   if (!students) return <p role="status">Buscando estudiantes compatibles…</p>;
-  if (!students.length)
-    return <p>Sin estudiantes compatibles. Puedes enviar la derivación a revisión sin receptor.</p>;
+  if (!students.length && !value)
+    return <p>{reviewing
+      ? 'Sin estudiantes compatibles. Si apruebas, el caso quedará pendiente de receptor.'
+      : 'Sin estudiantes compatibles. Puedes enviar la derivación a revisión sin receptor.'}</p>;
 
-  const receiver = students.find(student => String(student.id) === value);
+  const receiver = students.find(student => String(student.id) === String(value));
   return (
     <>
       <Select label="Estudiante receptor" value={value} onChange={e => onChange(e.target.value)}
-        hint="Coordinación revisará tu propuesta antes de asignar el caso.">
-        <option value="">Sin preferencia de receptor</option>
+        hint={reviewing ? 'Se comprobará el cupo al aprobar.' : 'Coordinación revisará tu propuesta antes de asignar el caso.'}>
+        <option value="">{reviewing ? 'Reparto automático' : 'Sin preferencia de receptor'}</option>
+        {value && !receiver && <option value={value} disabled>Receptor ya no disponible</option>}
         {students.map(student => (
           <option key={student.id} value={student.id}>
             {student.nombre} · {student.casos_activos}/{student.casos_necesarios} casos
