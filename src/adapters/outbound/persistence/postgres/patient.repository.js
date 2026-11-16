@@ -2,7 +2,7 @@ const { appendEvent } = require('./case-history');
 const { ConflictError } = require('../../../../shared/errors/AppError');
 const { ACTIVE_ASSIGNMENT_STATES } = require('../../../../domain/common');
 const { caseQueueOptions } = require('../../../../domain/patients/case-queue');
-const { INFECTION_ALERT, REVIEW_REQUIRED_REASON } = require('../../../../domain/matching/scoring');
+const { scorePatientCategory, REVIEW_REQUIRED_REASON } = require('../../../../domain/matching/scoring');
 
 const QUEUE_ORDER = `requiere_revision DESC, CASE prioridad
   WHEN 'Muy Alta' THEN 1 WHEN 'Alta' THEN 2 WHEN 'Moderada' THEN 3 ELSE 4 END,
@@ -14,14 +14,18 @@ class PatientRepository {
   }
 
   async createFromIntake(patient, answers, preCategory) {
+    const category = scorePatientCategory({
+      ...patient, respuestas_cuestionario: answers, pre_categorizacion_ia: preCategory,
+    });
     return this.database.transaction(async (db) => {
       const result = await db.query(
         `INSERT INTO pacientes
        (nombre_completo, edad, telefono, email, ciudad, sintomas_seleccionados,
         respuestas_cuestionario, pre_categorizacion_ia, fecha_pre_categorizacion,
-        nivel_dolor, prioridad, estado, activo, consentimiento_datos, fecha_consentimiento)
+        nivel_dolor, prioridad, estado, activo, consentimiento_datos, fecha_consentimiento,
+        motivo_revision_triaje)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_TIMESTAMP,
-               $9, 'Moderada', 'pendiente', TRUE, TRUE, CURRENT_TIMESTAMP)
+               $9, 'Moderada', 'pendiente', TRUE, TRUE, CURRENT_TIMESTAMP, $10)
        RETURNING id`,
         [
           patient.nombre_completo,
@@ -33,6 +37,7 @@ class PatientRepository {
           JSON.stringify(answers),
           JSON.stringify(preCategory),
           Math.max(0, Math.min(10, Number(answers.intensidad_dolor) || 0)),
+          category.reviewReason,
         ]
       );
       await appendEvent(
@@ -62,10 +67,12 @@ class PatientRepository {
                 COALESCE(a.estado IN ('asignado','notificado'), FALSE) AS sin_contactar,
                 COALESCE(a.estado IN ('asignado','notificado','contactado') AND
                   (a.fecha_cita + a.hora_fin_asignada) < (CURRENT_TIMESTAMP AT TIME ZONE 'America/Santiago'), FALSE) AS cita_vencida,
-                p.estado='pendiente' AND p.precalificacion_validada IS NULL AND COALESCE(
-                  (COALESCE(p.respuestas_cuestionario, p.sintomas_seleccionados)->>'signos_infeccion' = $5)
-                  OR (p.pre_categorizacion_ia->>'signos_infeccion' = $5), FALSE) AS requiere_revision,
-                CASE WHEN p.estado='pendiente' THEN p.ultimo_motivo_matching END AS motivo_matching,
+                p.estado='pendiente' AND p.precalificacion_validada IS NULL
+                  AND p.motivo_revision_triaje IS NOT NULL AS requiere_revision,
+                CASE WHEN p.estado='pendiente' AND p.precalificacion_validada IS NULL
+                       AND p.motivo_revision_triaje IS NOT NULL THEN p.motivo_revision_triaje
+                     WHEN p.estado='pendiente' AND p.ultimo_motivo_matching IS DISTINCT FROM p.motivo_revision_triaje
+                       AND p.ultimo_motivo_matching IS DISTINCT FROM $5 THEN p.ultimo_motivo_matching END AS motivo_matching,
                 p.ultimo_matching_en
            FROM pacientes p
            LEFT JOIN asignaciones a ON a.id_paciente=p.id AND a.estado=ANY($7::text[])
@@ -91,14 +98,10 @@ class PatientRepository {
            LIMIT $4 OFFSET ((SELECT page FROM totals) - 1) * $4
          ) listed
        ), '[]'::jsonb) AS data FROM totals`,
-      [search, filter, page, pageSize, INFECTION_ALERT, pendingOnly, ACTIVE_ASSIGNMENT_STATES]
+      [search, filter, page, pageSize, REVIEW_REQUIRED_REASON, pendingOnly, ACTIVE_ASSIGNMENT_STATES]
     );
     return {
-      data: result.data.map(row => ({
-        ...row,
-        motivo_matching: row.requiere_revision ? REVIEW_REQUIRED_REASON
-          : row.motivo_matching === REVIEW_REQUIRED_REASON ? null : row.motivo_matching,
-      })),
+      data: result.data,
       pagination: { total: result.total, page: result.page, pageSize },
     };
   }

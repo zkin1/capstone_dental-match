@@ -4,7 +4,7 @@ const {
   ConflictError,
   NotFoundError,
 } = require('../../../../shared/errors/AppError');
-const { CLINICS, nextDateFor, REVIEW_REQUIRED_REASON } = require('../../../../domain/matching/scoring');
+const { CLINICS, nextDateFor } = require('../../../../domain/matching/scoring');
 
 function placeholders(start, values) {
   return values.map((_, index) => `$${start + index}`).join(', ');
@@ -64,13 +64,15 @@ class MatchingRepository {
       });
       await db.query(
         `UPDATE pacientes SET tipo_tratamiento_inferido=$1,prioridad=$2,nivel_dolor=$3,
-        precalificacion_sugerida=COALESCE(precalificacion_sugerida,$5::jsonb),fecha_actualizacion=CURRENT_TIMESTAMP WHERE id=$4`,
+        precalificacion_sugerida=COALESCE(precalificacion_sugerida,$5::jsonb),
+        motivo_revision_triaje=$6,fecha_actualizacion=CURRENT_TIMESTAMP WHERE id=$4`,
         [
           category.specialty,
           category.priority,
           category.pain,
           patientId,
           JSON.stringify(suggestion),
+          category.reviewReason,
         ]
       );
       const pending = async (reason) => {
@@ -78,7 +80,7 @@ class MatchingRepository {
           await this.recordPending(db, patientId, reason);
         return { success: false, reason, category };
       };
-      if (category.redFlag && !category.validated) return pending(REVIEW_REQUIRED_REASON);
+      if (category.reviewReason && !category.validated) return pending(category.reviewReason);
       const candidates = await this.availableCandidates(
         db,
         patient,
@@ -88,10 +90,14 @@ class MatchingRepository {
       let preferredStudentId;
       if (patient.derivacion_id && !options.manual) {
         const referral = await db.query(
-          "SELECT propuesta FROM derivaciones WHERE id=$1 AND estado='aprobada' AND id_asignacion_destino IS NULL",
+          "SELECT propuesta,validacion FROM derivaciones WHERE id=$1 AND estado='aprobada' AND id_asignacion_destino IS NULL",
           [patient.derivacion_id]
         );
-        preferredStudentId = parseJson(referral.rows[0]?.propuesta)?.receptor?.id;
+        const review = parseJson(referral.rows[0]?.validacion);
+        const preference = review && Object.hasOwn(review, 'receptor')
+          ? review.receptor
+          : parseJson(referral.rows[0]?.propuesta)?.receptor;
+        preferredStudentId = preference?.id;
       }
       const eligible = candidates.filter((candidate) =>
         (!options.manual || String(candidate.id_especialidad_estudiante) === String(options.scheduleId)) &&
@@ -264,7 +270,7 @@ class MatchingRepository {
           [candidate.id_estudiante, ACTIVE_ASSIGNMENT_STATES]
         );
         const absences = await db.query(
-          'SELECT fecha::text FROM ausencias_estudiante WHERE id_estudiante=$1 AND fecha>=CURRENT_DATE',
+          "SELECT fecha::text FROM ausencias_estudiante WHERE id_estudiante=$1 AND fecha>=(CURRENT_TIMESTAMP AT TIME ZONE 'America/Santiago')::date",
           [candidate.id_estudiante]
         );
         availabilityByStudent.set(candidate.id_estudiante, {
@@ -279,8 +285,13 @@ class MatchingRepository {
       let date = nextDateFor(candidate.dia_semana);
       while (blocked.has(date)) date = nextDateFor(candidate.dia_semana, ++weeksLater);
       const count = await db.query(
-        `SELECT COUNT(*) AS total FROM asignaciones WHERE id_estudiante=$1 AND fecha_cita=$2
-        AND hora_inicio_asignada < $4::time AND hora_fin_asignada > $3::time AND estado=ANY($5::text[])`,
+        `SELECT COUNT(*) AS total,
+                COUNT(*) FILTER (WHERE a.hora_inicio_asignada <> $3::time OR a.hora_fin_asignada <> $4::time) AS cruces,
+                MIN(e.capacidad_pacientes) AS menor_cupo
+           FROM asignaciones a
+           LEFT JOIN especialidades_estudiante e ON e.id=a.id_especialidad_estudiante
+          WHERE a.id_estudiante=$1 AND a.fecha_cita=$2 AND a.estado=ANY($5::text[])
+            AND a.hora_inicio_asignada < $4::time AND a.hora_fin_asignada > $3::time`,
         [
           candidate.id_estudiante,
           date,
@@ -289,9 +300,10 @@ class MatchingRepository {
           ACTIVE_ASSIGNMENT_STATES,
         ]
       );
-      if (
-        Number(count.rows[0].total) < Number(candidate.capacidad_pacientes || 1)
-      )
+      const occupancy = count.rows[0];
+      const capacity = Number(candidate.capacidad_pacientes || 1);
+      const sharedCapacity = Math.min(capacity, Number(occupancy.menor_cupo ?? capacity));
+      if (Number(occupancy.cruces || 0) === 0 && Number(occupancy.total) < sharedCapacity)
         available.push({ ...candidate, fecha_cita: date });
     }
     return available;
@@ -324,7 +336,7 @@ class MatchingRepository {
         excluded = assignment.id_estudiante;
       }
       const category = categorize(patient);
-      if (category.redFlag && !category.validated) return [];
+      if (category.reviewReason && !category.validated) return [];
       const candidates = await this.availableCandidates(
         db,
         patient,

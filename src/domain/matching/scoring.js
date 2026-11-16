@@ -6,6 +6,14 @@ const {
 
 const INFECTION_ALERT = 'Absceso/Hinchazon con fiebre';
 const REVIEW_REQUIRED_REASON = 'El caso requiere revisión de coordinación por una alerta clínica';
+const DISCREPANCY_REASON = 'El cuestionario y el agente discrepan; el caso requiere revisión clínica';
+
+function hasInfectionAlert(answers) {
+  const value = answers?.signos_infeccion;
+  return typeof value === 'string' &&
+    value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+      .replace(/\s*\/\s*/g, '/').replace(/\s+/g, ' ').trim() === INFECTION_ALERT.toLowerCase();
+}
 
 const WEIGHTS = Object.freeze({
   horario: 0.3,
@@ -21,10 +29,7 @@ const CLINICS = Object.freeze({
   adult: 'Clínica Integral Adulto y Gerontología',
 });
 
-function scorePatientCategory(patient) {
-  const original = parseJson(patient.respuestas_cuestionario, null) ||
-    parseJson(patient.sintomas_seleccionados, {});
-  const answers = parseJson(patient.pre_categorizacion_ia, null) || original;
+function classify(patient, answers) {
   const pain = Math.max(
     0,
     Math.min(10, Number(answers.intensidad_dolor ?? patient.nivel_dolor) || 0)
@@ -34,13 +39,12 @@ function scorePatientCategory(patient) {
   let specialty = normalizeSpecialty(patient.tipo_tratamiento_inferido);
   let priority = normalizePriority(patient.prioridad);
   let reason = 'Evaluación general';
-  let redFlag = false;
+  const redFlag = hasInfectionAlert(answers);
 
-  if ([original.signos_infeccion, answers.signos_infeccion].includes(INFECTION_ALERT)) {
+  if (redFlag) {
     specialty = 'Endodoncia';
     priority = 'Muy Alta';
     reason = 'Signos de infección con fiebre';
-    redFlag = true;
   } else if (
     answers.estado_periodontal === 'Periodontitis avanzada' ||
     answers.movilidad_dental === 'Grado III (severa)' ||
@@ -71,26 +75,40 @@ function scorePatientCategory(patient) {
   if (!specialty) specialty = 'Operatoria Dental';
   if (isChild) specialty = 'Odontopediatría';
 
+  return { specialty, priority, pain, redFlag, reason, treatment: `Evaluación de ${specialty}` };
+}
+
+function scorePatientCategory(patient) {
+  const original = parseJson(patient.respuestas_cuestionario) ||
+    parseJson(patient.sintomas_seleccionados) || {};
+  const normalized = parseJson(patient.pre_categorizacion_ia);
+  const originalCategory = classify(patient, original);
+  const suggested = normalized ? classify(patient, normalized) : originalCategory;
+  // Compare without the inferred values that a previous matching run may have updated.
+  const baseline = { ...patient, tipo_tratamiento_inferido: null, prioridad: 'Moderada',
+    nivel_dolor: original.intensidad_dolor ?? 0 };
+  const originalEvidence = normalized && classify(baseline, original);
+  const normalizedEvidence = normalized && classify(baseline, normalized);
+  const discrepancy = normalizedEvidence && (
+    originalEvidence.specialty !== normalizedEvidence.specialty ||
+    originalEvidence.priority !== normalizedEvidence.priority
+  );
+  const category = originalCategory.redFlag ? originalCategory : suggested;
+  const reviewReason = category.redFlag ? REVIEW_REQUIRED_REASON : discrepancy ? DISCREPANCY_REASON : null;
   const validated = parseJson(patient.precalificacion_validada);
   if (validated && normalizeSpecialty(validated.specialty)) {
     return {
       specialty: validated.specialty,
       priority: normalizePriority(validated.priority),
-      pain,
-      redFlag,
+      pain: category.pain,
+      redFlag: category.redFlag,
+      reviewReason,
       reason: validated.reason,
       treatment: validated.treatment,
       validated: true,
     };
   }
-  return {
-    specialty,
-    priority,
-    pain,
-    redFlag,
-    reason,
-    treatment: `Evaluación de ${specialty}`,
-  };
+  return { ...category, reviewReason };
 }
 
 function scheduleCompatibility(patient, candidate) {
@@ -156,11 +174,14 @@ function nextDateFor(day, weeksLater = 0) {
   ];
   const target = weekdays.indexOf(day);
   if (target < 0) throw new Error(`Día de atención inválido: ${day}`);
-  const date = new Date();
-  let delta = (target - date.getDay() + 7) % 7;
-  if (delta === 0) delta = 7;
-  date.setDate(date.getDate() + delta + weeksLater * 7);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  const parts = new Intl.DateTimeFormat('en', {
+    timeZone: 'America/Santiago', year: 'numeric', month: 'numeric', day: 'numeric',
+  }).formatToParts(new Date());
+  const { year, month, day: localDay } = Object.fromEntries(parts.map(part => [part.type, Number(part.value)]));
+  const date = new Date(Date.UTC(year, month - 1, localDay));
+  const delta = (target - date.getUTCDay() + 7) % 7 || 7;
+  date.setUTCDate(date.getUTCDate() + delta + weeksLater * 7);
+  return date.toISOString().slice(0, 10);
 }
 
 module.exports = {

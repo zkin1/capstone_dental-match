@@ -86,11 +86,10 @@ class AssignmentRepository {
       if (decision.observation !== undefined)
         add('observaciones_estudiante', decision.observation);
 
+      updates.push('fecha_actualizacion = CURRENT_TIMESTAMP');
       values.push(id);
       await connection.query(
-        `UPDATE asignaciones
-            SET ${updates.join(', ')}, fecha_actualizacion = CURRENT_TIMESTAMP
-          WHERE id = $${values.length}`,
+        `UPDATE asignaciones SET ${updates.join(', ')} WHERE id = $${values.length}`,
         values
       );
 
@@ -122,11 +121,15 @@ class AssignmentRepository {
         assignment.id_paciente,
         id,
         user,
-        decision.nextState === assignment.estado ? 'nota' : 'estado',
+        decision.followUp ? 'seguimiento_paciente' : decision.nextState === assignment.estado ? 'nota' : 'estado',
         assignment.estado,
         decision.nextState,
         decision.cancellationReason || decision.observation,
-        decision.cancellationReason ? { motivo_cancelacion: decision.cancellationReason } : {}      );
+        {
+          ...(decision.cancellationReason ? { motivo_cancelacion: decision.cancellationReason } : {}),
+          ...(decision.followUp ? { seguimiento: decision.followUp } : {}),
+        }
+      );
       return { ok: true, message: 'Asignación actualizada' };
     });
   }

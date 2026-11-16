@@ -10,6 +10,10 @@ function numericId(id) {
   return Number(id);
 }
 
+function optionalReceiverId(value) {
+  return value == null || value === '' ? null : numericId(value);
+}
+
 class CaseService {
   constructor(repository, matching) {
     this.repository = repository;
@@ -31,9 +35,7 @@ class CaseService {
   }
   propose(id, input, user) {
     const qualification = validateQualification(input);
-    const receiverId = input.id_estudiante_destino == null || input.id_estudiante_destino === ''
-      ? null
-      : numericId(input.id_estudiante_destino);
+    const receiverId = optionalReceiverId(input.id_estudiante_destino);
     return this.repository.propose(numericId(id), qualification, user, receiverId);
   }
   listReferrals() {
@@ -55,7 +57,10 @@ class CaseService {
       input.estado,
       qualification,
       reason,
-      user
+      user,
+      input.estado === 'aprobada' && input.id_estudiante_destino !== undefined
+        ? optionalReceiverId(input.id_estudiante_destino)
+        : undefined
     );
     if (input.estado === 'aprobada') {
       try {

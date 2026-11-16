@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { apiFetch } from '../lib/api';
 import { useAuth } from '../hooks/authContext';
 import { useToast } from './toastContext';
-import { Select, Textarea } from './Field';
+import { Input, Select, Textarea } from './Field';
 import Button from './Button';
 import Badge from './Badge';
 import Modal from './Modal';
@@ -18,6 +18,20 @@ const NEXT = {
   en_tratamiento: ['completado', 'cancelado'],
 };
 const date = (value) => new Date(value).toLocaleString('es-CL');
+const CONTACT_OUTCOMES = ['sin_respuesta', 'contactado', 'acepta', 'pide_reprogramar', 'rechaza'];
+const EMPTY_FOLLOWUP = { resultado: '', motivo: '', proxima_fecha: '', fecha_acordada: '' };
+
+function FollowUpSummary({ value }) {
+  const formatDay = (day) => day.split('-').reverse().join('/');
+  return (
+    <dl className="case-data">
+      <dt>Resultado de contacto</dt><dd>{label(value.resultado)}</dd>
+      {value.motivo && <><dt>Motivo</dt><dd>{value.motivo}</dd></>}
+      {value.proxima_fecha && <><dt>Próximo seguimiento</dt><dd>{formatDay(value.proxima_fecha)}</dd></>}
+      {value.fecha_acordada && <><dt>Fecha acordada</dt><dd>{formatDay(value.fecha_acordada)}</dd></>}
+    </dl>
+  );
+}
 function Classification({ title, value }) {
   return (
     <section className="case-section">
@@ -63,6 +77,7 @@ export default function CaseDetail({
   const [state, setState] = useState('');
   const [note, setNote] = useState('');
   const [cancellationReason, setCancellationReason] = useState('');
+  const [followUp, setFollowUp] = useState(EMPTY_FOLLOWUP);
   const [mode, setMode] = useState('');
   const [draft, setDraft] = useState(null);
   const [decision, setDecision] = useState('aprobada');
@@ -97,6 +112,7 @@ export default function CaseDetail({
       setMode('');
       setNote('');
       setCancellationReason('');
+      setFollowUp(EMPTY_FOLLOWUP);
       setReviewNote('');
       await load();
       await onChanged?.();
@@ -114,6 +130,7 @@ export default function CaseDetail({
       treatment: '',
       reason: '',
       ...initial,
+      id_estudiante_destino: nextMode === 'review' && initial?.receptor ? String(initial.receptor.id) : '',
     });
   }
   const patient = detail?.paciente;
@@ -133,6 +150,14 @@ export default function CaseDetail({
     !['derivado', 'completado', 'cancelado', 'derivacion_pendiente'].includes(
       assignment.estado
     );
+  const lastFollowUp = assignment && detail.historial.findLast(event =>
+    event.id_asignacion === assignment.id && event.datos?.seguimiento
+  )?.datos.seguimiento;
+  const canFollowUp = activeAssignment && !['cancelado', 'completado'].includes(state);
+  const recordingFollowUp = canFollowUp && Boolean(followUp.resultado);
+  const needsReason = ['pide_reprogramar', 'rechaza'].includes(followUp.resultado);
+  const hasAgreedDate = !['sin_respuesta', 'rechaza'].includes(followUp.resultado);
+  const setFollowUpValue = (key, value) => setFollowUp(previous => ({ ...previous, [key]: value }));
   const manualAssignment = activeAssignment
     ? assignment
     : current?.estado !== 'derivacion_pendiente'
@@ -209,9 +234,9 @@ export default function CaseDetail({
             title="Precalificación sugerida por el sistema"
             value={detail.sugerencia}
           />
-          {detail.sugerencia.redFlag && (
+          {detail.sugerencia.reviewReason && (
             <p className="alert" role="status">
-              El cuestionario contiene una alerta clínica que requiere evaluación urgente.
+              {detail.sugerencia.reviewReason}.
               {!detail.validacion && ' Revisa la precalificación antes de asignar este caso.'}
             </p>
           )}
@@ -256,7 +281,8 @@ export default function CaseDetail({
 
           {assignment && (
             <section className="case-section">
-              <h3>Seguimiento</h3>
+              <h3>Seguimiento del paciente</h3>
+              {lastFollowUp && <FollowUpSummary value={lastFollowUp} />}
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -266,6 +292,11 @@ export default function CaseDetail({
                     {
                       estado: state,
                       ...(cancelling ? { motivo_cancelacion: cancellationReason.trim() } : {}),
+                      ...(recordingFollowUp ? { seguimiento: {
+                        ...followUp,
+                        proxima_fecha: followUp.proxima_fecha || null,
+                        fecha_acordada: hasAgreedDate ? followUp.fecha_acordada || null : null,
+                      } } : {}),
                       ...(!cancelling && note.trim()
                         ? { observaciones_estudiante: note.trim() }
                         : {}),
@@ -306,15 +337,40 @@ export default function CaseDetail({
                     hint="Cada nota se conserva en el historial con tu nombre y fecha."
                   />
                 )}
+                {canFollowUp && (
+                  <>
+                    <Select label="Resultado de contacto" value={followUp.resultado} onChange={(e) =>
+                      setFollowUp(previous => ({ ...previous, resultado: e.target.value, fecha_acordada: '' }))
+                    }>
+                      <option value="">Seleccionar resultado</option>
+                      {CONTACT_OUTCOMES.map(outcome => <option key={outcome} value={outcome}>{label(outcome)}</option>)}
+                    </Select>
+                    {recordingFollowUp && (
+                      <>
+                        <Textarea label="Motivo del seguimiento" required={needsReason}
+                          minLength={needsReason ? 5 : undefined} maxLength={2000} rows={2}
+                          value={followUp.motivo} onChange={(e) => setFollowUpValue('motivo', e.target.value)} />
+                        <Input type="date" label="Próxima fecha de seguimiento" value={followUp.proxima_fecha}
+                          onChange={(e) => setFollowUpValue('proxima_fecha', e.target.value)} />
+                        {hasAgreedDate && <Input type="date" label="Fecha acordada" value={followUp.fecha_acordada}
+                          onChange={(e) => setFollowUpValue('fecha_acordada', e.target.value)} />}
+                      </>
+                    )}
+                  </>
+                )}
                 <Button
                   type="submit"
                   loading={saving}
-                  disabled={cancelling ? cancellationReason.trim().length < 5 : state === assignment.estado && !note.trim()}
+                  disabled={cancelling ? cancellationReason.trim().length < 5
+                    : state === assignment.estado && !note.trim() && !recordingFollowUp}
                 >
                   Guardar seguimiento
                 </Button>
               </form>
             </section>
+          )}
+          {['asignado', 'notificado'].includes(assignment?.estado) && (
+            <p>Para derivar este caso, registra primero que contactaste al paciente.</p>
           )}
           <div className="table-actions">
             {assignment &&
@@ -345,7 +401,7 @@ export default function CaseDetail({
             )}
             {staff &&
               patient.activo &&
-              (!detail.sugerencia.redFlag || detail.validacion) &&
+              (!detail.sugerencia.reviewReason || detail.validacion) &&
               (manualAssignment || patient.estado === 'pendiente') && (
                 <Button variant="secondary" onClick={() => setMode('manual')}>
                   {manualAssignment
@@ -415,7 +471,7 @@ export default function CaseDetail({
                     onChange={(e) => setDecision(e.target.value)}
                   >
                     <option value="aprobada">
-                      {pending.propuesta.receptor ? 'Aprobar con el receptor propuesto' : 'Aprobar y buscar receptor'}
+                      Aprobar derivación
                     </option>
                     <option value="rechazada">
                       Rechazar y devolver al seguimiento
@@ -429,10 +485,11 @@ export default function CaseDetail({
                       : { ...updated, id_estudiante_destino: '' }
                   )} />
                 )}
-                {mode === 'refer' && (
+                {(mode === 'refer' || (mode === 'review' && decision === 'aprobada')) && (
                   <ReferralReceiver
-                    key={assignment.id + ':' + draft.specialty}
-                    assignmentId={assignment.id}
+                    key={(mode === 'review' ? pending.id_asignacion_origen : assignment.id) + ':' + draft.specialty}
+                    assignmentId={mode === 'review' ? pending.id_asignacion_origen : assignment.id}
+                    reviewing={mode === 'review'}
                     specialty={draft.specialty}
                     value={draft.id_estudiante_destino || ''}
                     onChange={(id) => setDraft(currentDraft => ({ ...currentDraft, id_estudiante_destino: id }))}
@@ -500,6 +557,7 @@ export default function CaseDetail({
                     </p>
                   )}
                   {event.nota && <p className="case-note">{event.nota}</p>}
+                  {event.datos?.seguimiento && <FollowUpSummary value={event.datos.seguimiento} />}
                   {event.datos?.validacion && (
                     <p>
                       {event.datos.validacion.treatment} ·{' '}

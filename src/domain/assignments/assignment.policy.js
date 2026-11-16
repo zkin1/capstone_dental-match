@@ -4,6 +4,25 @@ const {
   ACTIVE_ASSIGNMENT_STATES,
 } = require('../common');
 
+const CONTACT_OUTCOMES = ['sin_respuesta', 'contactado', 'acepta', 'pide_reprogramar', 'rechaza'];
+
+function validDate(value) {
+  if (typeof value !== 'string' || !/^[1-9]\d{3}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(value);
+  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
+function validateFollowUp(value) {
+  if (!CONTACT_OUTCOMES.includes(value?.resultado)) return null;
+  const { resultado, motivo = '', proxima_fecha = null, fecha_acordada = null } = value;
+  if (typeof motivo !== 'string' || motivo.trim().length > 2000 ||
+      (['pide_reprogramar', 'rechaza'].includes(resultado) && motivo.trim().length < 5) ||
+      (proxima_fecha !== null && !validDate(proxima_fecha)) ||
+      (fecha_acordada !== null && (!validDate(fecha_acordada) ||
+        ['sin_respuesta', 'rechaza'].includes(resultado)))) return null;
+  return { resultado, motivo: motivo.trim(), proxima_fecha, fecha_acordada };
+}
+
 function decideUpdate(assignment, input, user) {
   if (!assignment)
     return {
@@ -33,7 +52,20 @@ function decideUpdate(assignment, input, user) {
     };
   }
 
-  const nextState = input.estado || assignment.estado;
+  let followUp;
+  let nextState = input.estado || assignment.estado;
+  if (input.seguimiento !== undefined) {
+    followUp = validateFollowUp(input.seguimiento);
+    if (!followUp)
+      return { ok: false, code: 'VALIDATION', message: 'Revisa el resultado, el motivo y las fechas del seguimiento' };
+    if (!['asignado', 'notificado', 'contactado', 'en_tratamiento'].includes(assignment.estado) ||
+        ['cancelado', 'completado'].includes(nextState))
+      return { ok: false, code: 'CONFLICT', message: 'Registra el seguimiento desde una asignación activa' };
+    if (followUp.resultado !== 'sin_respuesta' && ['asignado', 'notificado'].includes(nextState))
+      nextState = 'contactado';
+    if (followUp.resultado === 'sin_respuesta' && assignment.estado !== 'contactado' && nextState === 'contactado')
+      return { ok: false, code: 'VALIDATION', message: 'El estado Contactado requiere que el paciente haya respondido' };
+  }
   if (!ASSIGNMENT_STATES.includes(nextState)) {
     return {
       ok: false,
@@ -53,7 +85,7 @@ function decideUpdate(assignment, input, user) {
   }
   if (
     nextState === assignment.estado &&
-    !input.observaciones_estudiante?.trim()
+    !input.observaciones_estudiante?.trim() && !followUp
   ) {
     return {
       ok: false,
@@ -76,6 +108,7 @@ function decideUpdate(assignment, input, user) {
   return {
     ok: true,
     cancellationReason,
+    followUp,
     nextState,
     isActive: ACTIVE_ASSIGNMENT_STATES.includes(nextState),
     observation:

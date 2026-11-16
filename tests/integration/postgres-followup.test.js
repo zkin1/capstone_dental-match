@@ -176,6 +176,127 @@ run("seguimiento con PostgreSQL real", () => {
       ),
     ).toBe(1);
   });
+  test("la migración calcula la alerta de un cuestionario histórico y conserva su respuesta", async () => {
+    const migration = require("../../src/infrastructure/database/migrations/20261116000001_triage_review_reason");
+    const p = await patient("Cuestionario histórico sintético");
+    const answers = { signos_infeccion: "Absceso / Hinchazón con fiebre" };
+    const normalized = { signos_infeccion: "Ninguno" };
+    await pool.query(
+      "UPDATE pacientes SET respuestas_cuestionario=$2,pre_categorizacion_ia=$3 WHERE id=$1",
+      [p.id, answers, normalized],
+    );
+    await migration.up(pool);
+    const { rows: [stored] } = await pool.query(
+      "SELECT motivo_revision_triaje,respuestas_cuestionario,pre_categorizacion_ia FROM pacientes WHERE id=$1",
+      [p.id],
+    );
+    expect(stored).toEqual({
+      motivo_revision_triaje: expect.stringMatching(/alerta clínica/),
+      respuestas_cuestionario: answers,
+      pre_categorizacion_ia: normalized,
+    });
+  });
+
+  test("triaje bloquea asignación manual y automática cuando el agente cambia la clasificación", async () => {
+    const repository = new PatientRepository(mockDatabase);
+    const p = await repository.createFromIntake({
+      nombre_completo: "Discrepancia sintética", edad: 32, telefono: "900000006", ciudad: "Metropolitana",
+    }, { tipo_dolor: "Espontaneo" }, { tipo_dolor: "Ninguno" });
+    const page = await repository.list({ filtro: "revision", q: "Discrepancia sintética" });
+    expect(page.data).toEqual([expect.objectContaining({ requiere_revision: true, motivo_matching: expect.stringMatching(/discrepan/) })]);
+    expect(await matching.candidates(p)).toEqual([]);
+    expect(await assignTo({ id: p }, student1)).toMatchObject({ success: false, reason: expect.stringMatching(/discrepan/) });
+    expect(await matching.matchPatient(p)).toMatchObject({ success: false, reason: expect.stringMatching(/discrepan/) });
+    const before = await cases.detail(p, admin);
+    expect(before.validacion).toBeNull();
+    expect(before.sugerencia.reviewReason).toMatch(/discrepan/);
+    await cases.qualify(p, { ...qualification, specialty: "Operatoria Dental" }, admin);
+    expect(await assignTo({ id: p }, student1)).toMatchObject({ success: true });
+    const after = await cases.detail(p, admin);
+    expect(after.sugerencia).toEqual(before.sugerencia);
+    expect(after.validacion).toMatchObject({ specialty: "Operatoria Dental", reviewer: admin.nombre_completo });
+    await assignments.update(after.asignaciones.at(-1).id, {
+      estado: "cancelado", motivo_cancelacion: "Cierre de la prueba de triaje",
+    }, admin);
+  });
+
+  test("manual y automático compiten por el mismo caso sin duplicar la asignación", async () => {
+    const p = await patient("Concurrencia manual y automática");
+    const result = await Promise.all([assignTo(p, student2), matching.matchPatient(p.id)]);
+    expect(result.filter(item => item.success)).toHaveLength(1);
+    const winner = result.find(item => item.success);
+    await assignments.update(winner.assignmentId, {
+      estado: "cancelado", motivo_cancelacion: "Cierre de la prueba concurrente",
+    }, admin);
+    const { rows } = await pool.query("SELECT id FROM asignaciones WHERE id_paciente=$1", [p.id]);
+    expect(rows).toHaveLength(1);
+  });
+
+  test("cupo por bloque, cruces, ausencia, ciudad y clínica aplican en ambos caminos", async () => {
+    const { nextDateFor } = require("../../src/domain/matching/scoring");
+    const [operative, endo] = student3.schedules;
+    const unavailable = await patient("Cruce y ausencia");
+    const holder = await patient("Cupo sintético");
+    const tomorrow = nextDateFor("lunes");
+    const excluded = [student1.id, student2.id];
+    const allowedFrom = async () => (await matching.candidates(unavailable.id)).map(c => c.id_estudiante);
+    let appointment;
+    try {
+      await pool.query("UPDATE estudiantes_odontologia SET estado='inactivo' WHERE id=ANY($1::bigint[])", [excluded]);
+      await pool.query("UPDATE especialidades_estudiante SET capacidad_pacientes=1 WHERE id=$1", [operative.id]);
+      const competing = await patient("Último cupo solicitado en paralelo");
+      const contenders = await Promise.all([assignTo(holder, student3), matching.matchPatient(competing.id)]);
+      expect(contenders.filter(result => result.success)).toHaveLength(1);
+      appointment = contenders.find(result => result.success);
+      await pool.query("UPDATE especialidades_estudiante SET hora_inicio='09:00',hora_fin='13:00' WHERE id=$1", [endo.id]);
+      await pool.query("UPDATE pacientes SET tipo_tratamiento_inferido='Endodoncia' WHERE id=$1", [unavailable.id]);
+      expect(await allowedFrom()).toEqual([]);
+      expect(await matching.manual(unavailable.id, { id_especialidad_estudiante: endo.id, motivo: "Prueba de cruce" }, admin))
+        .toMatchObject({ success: false });
+      expect(await matching.matchPatient(unavailable.id)).toMatchObject({ success: false });
+      await assignments.update(appointment.assignmentId, { estado: "cancelado", motivo_cancelacion: "Libera bloque para prueba" }, admin);
+      appointment = null;
+      await pool.query("UPDATE estudiantes_odontologia SET ciudad='Valparaíso' WHERE id=$1", [student3.id]);
+      expect(await allowedFrom()).toEqual([]);
+      await pool.query("UPDATE estudiantes_odontologia SET ciudad='Metropolitana' WHERE id=$1", [student3.id]);
+      await pool.query("UPDATE especialidades_estudiante SET clinica='Clínica para el Niño y Adolescente' WHERE id=$1", [endo.id]);
+      expect(await allowedFrom()).toEqual([]);
+      await pool.query("UPDATE especialidades_estudiante SET clinica=$2 WHERE id=$1", [endo.id, endo.clinica]);
+      await pool.query("INSERT INTO ausencias_estudiante(id_estudiante,fecha) VALUES ($1,$2)", [student3.id, tomorrow]);
+      expect(await matching.candidates(unavailable.id)).toMatchObject([{ fecha_cita: nextDateFor("lunes", 1) }]);
+      appointment = await matching.matchPatient(unavailable.id);
+      expect(appointment).toMatchObject({ success: true, fecha_cita: nextDateFor("lunes", 1) });
+    } finally {
+      if (appointment?.success) await assignments.update(appointment.assignmentId, {
+        estado: "cancelado", motivo_cancelacion: "Cierre de prueba de elegibilidad",
+      }, admin);
+      await pool.query("DELETE FROM ausencias_estudiante WHERE id_estudiante=$1 AND fecha=$2", [student3.id, tomorrow]);
+      await pool.query("UPDATE estudiantes_odontologia SET estado='activo',ciudad='Metropolitana' WHERE id=ANY($1::bigint[])", [[...excluded, student3.id]]);
+      for (const schedule of [operative, endo])
+        await pool.query("UPDATE especialidades_estudiante SET hora_inicio=$2,hora_fin=$3,capacidad_pacientes=$4,clinica=$5 WHERE id=$1",
+          [schedule.id, schedule.hora_inicio, schedule.hora_fin, schedule.capacidad_pacientes, schedule.clinica]);
+    }
+  });
+
+  test("el seguimiento conserva los intentos sin respuesta y rechaza fechas y permisos inválidos", async () => {
+    const p = await patient("Seguimiento estructurado");
+    const result = await assignTo(p, student2);
+    const followUp = { resultado: "sin_respuesta", motivo: "Intento de contacto ficticio", proxima_fecha: "2028-02-29" };
+    expect(await assignments.update(result.assignmentId, { seguimiento: followUp }, student1.user))
+      .toMatchObject({ ok: false, code: "FORBIDDEN" });
+    expect(await assignments.update(result.assignmentId, { seguimiento: { ...followUp, proxima_fecha: "2027-02-29" } }, student2.user))
+      .toMatchObject({ ok: false, code: "VALIDATION" });
+    expect(await assignments.update(result.assignmentId, { seguimiento: followUp }, student2.user))
+      .toMatchObject({ ok: true });
+    const detail = await cases.detail(result.assignmentId, student2.user, true);
+    expect(detail.asignacion.estado).toBe("asignado");
+    expect(detail.historial.at(-1)).toMatchObject({
+      tipo: "seguimiento_paciente", responsable: student2.nombre_completo,
+      datos: { seguimiento: { ...followUp, fecha_acordada: null } },
+    });
+    await assignments.update(result.assignmentId, { estado: "cancelado", motivo_cancelacion: "Cierre de prueba de seguimiento" }, admin);
+  });
+
   test("estudiante ve contacto y solo su caso; las notas son inmutables y tienen responsable", async () => {
     const p = await patient("Paciente con historial");
     const assignment = await assignTo(p, student1);
@@ -458,6 +579,33 @@ run("seguimiento con PostgreSQL real", () => {
       success: true, codigo_estudiante: student3.codigo_estudiante,
     });
   });
+  test("coordinación puede cambiar el receptor y una selección obsoleta conserva pendiente la derivación", async () => {
+    const p = await patient("Coordinación cambia receptor");
+    const a = await assignTo(p, student1);
+    await assignments.update(a.assignmentId, { estado: "contactado" }, student1.user);
+    const referral = await caseService.propose(a.assignmentId, { ...qualification, id_estudiante_destino: student3.id }, student1.user);
+    await expect(caseService.referralCandidates(a.assignmentId, qualification.specialty, student1.user))
+      .rejects.toMatchObject({ statusCode: 409 });
+    expect((await caseService.referralCandidates(a.assignmentId, qualification.specialty, admin)).map(({ id }) => id)).toContain(student2.id);
+    const decision = { ...qualification, estado: "aprobada", motivo_revision: "Selecciono otro receptor elegible" };
+    await expect(caseService.review(referral.id, { ...decision, id_estudiante_destino: student1.id }, admin))
+      .rejects.toMatchObject({ statusCode: 409 });
+    try {
+      await pool.query("UPDATE estudiantes_odontologia SET estado='inactivo' WHERE id=$1", [student3.id]);
+      await expect(caseService.review(referral.id, decision, admin)).rejects.toMatchObject({ statusCode: 409 });
+      expect((await cases.detail(p.id, admin)).derivaciones[0].estado).toBe("pendiente");
+    } finally {
+      await pool.query("UPDATE estudiantes_odontologia SET estado='activo' WHERE id=$1", [student3.id]);
+    }
+    const result = await caseService.review(referral.id, { ...decision, id_estudiante_destino: student2.id }, admin);
+    expect(result.matching).toMatchObject({ success: true, codigo_estudiante: student2.codigo_estudiante });
+    const detail = await cases.detail(p.id, admin);
+    expect(detail.derivaciones[0]).toMatchObject({
+      propuesta: { receptor: { id: student3.id } }, validacion: { receptor: { id: student2.id } },
+    });
+    await assignments.update(result.matching.assignmentId, { estado: "cancelado", motivo_cancelacion: "Cierre de prueba de receptor" }, admin);
+  });
+
   test("aprobar sin especialidad compatible conserva el caso pendiente y la clasificación validada", async () => {
     const p = await patient("Sin receptor");
     const a = await assignTo(p, student1);
