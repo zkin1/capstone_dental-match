@@ -150,6 +150,44 @@ describe('contrato HTTP del BFF', () => {
     expect(response.status).toBe(400);
     expect(mockConnection.query).not.toHaveBeenCalled();
   });
+  
+  test('rechaza una descripción demasiado corta', async () => {
+  const response = await request(app)
+    .post('/api/pacientes/intake')
+    .send({
+      nombre_completo: 'Paciente Demo',
+      edad: 30,
+      telefono: '912345678',
+      ciudad: 'Metropolitana',
+      consentimiento_datos: true,
+      respuestas: {
+        intensidad_dolor: 4,
+        queja: 'Me duele',
+      },
+    });
+
+  expect(response.status).toBe(400);
+  expect(mockConnection.query).not.toHaveBeenCalled();
+});
+
+test('rechaza una descripción demasiado larga', async () => {
+  const response = await request(app)
+    .post('/api/pacientes/intake')
+    .send({
+      nombre_completo: 'Paciente Demo',
+      edad: 30,
+      telefono: '912345678',
+      ciudad: 'Metropolitana',
+      consentimiento_datos: true,
+      respuestas: {
+        intensidad_dolor: 4,
+        queja: 'a'.repeat(2001),
+      },
+    });
+
+  expect(response.status).toBe(400);
+  expect(mockConnection.query).not.toHaveBeenCalled();
+});
 
   test('impide que estudiantes accedan al dashboard administrativo', async () => {
     const token = generateToken({

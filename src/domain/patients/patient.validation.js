@@ -28,13 +28,21 @@ function validateBasePatient(input) {
 function validateIntake(input) {
   const base = validateBasePatient(input);
   if (base.error) return base;
+
   if (input.consentimiento_datos !== true) {
     return { error: 'Debes aceptar el uso de datos para gestionar el caso' };
   }
+
   if (!input.respuestas || typeof input.respuestas !== 'object'
     || Array.isArray(input.respuestas) || !Object.keys(input.respuestas).length) {
     return { error: 'El cuestionario clínico es obligatorio' };
   }
+
+  const queja = input.respuestas.queja;
+  if (typeof queja !== 'string' || queja.trim().length < 10 || queja.length > 2000) {
+    return { error: 'La descripción debe tener entre 10 y 2000 caracteres' };
+  }
+  
   return { value: base.value, answers: input.respuestas };
 }
 
