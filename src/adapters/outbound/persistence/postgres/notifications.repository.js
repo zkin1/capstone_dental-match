@@ -25,15 +25,16 @@ class NotificationsRepository {
     ).rows;
   }
 
-  async claim(id, manual = false, idempotent = true) {
+  async claim(id, manual = false, idempotent = true, createdFrom = null) {
     return this.database.transaction(async (db) => {
       const result = await db.query(
         `SELECT * FROM notificaciones_email WHERE
         ($1::bigint IS NULL OR id=$1) AND (estado IN ('pendiente','fallido') OR
         (estado='enviando' AND fecha_reclamo < CURRENT_TIMESTAMP-INTERVAL '5 minutes'))
         AND ($2::boolean OR (intentos_envio < 5 AND proximo_intento <= CURRENT_TIMESTAMP))
+        AND ($3::timestamptz IS NULL OR fecha_creacion >= $3)
         ORDER BY fecha_creacion,id LIMIT 1 FOR UPDATE SKIP LOCKED`,
-        [id || null, manual]
+        [id || null, manual, createdFrom]
       );
       const notification = result.rows[0];
       if (!notification) {

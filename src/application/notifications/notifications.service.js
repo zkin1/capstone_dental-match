@@ -11,7 +11,7 @@ class NotificationsService {
     return this.repository.list(limit);
   }
 
-  async send(id, user, manual = false) {
+  async send(id, user, manual = false, createdFrom = null) {
     if (!this.provider?.configured())
       throw new AppError(
         'Configura el correo: EMAIL_PROVIDER=gmail con SMTP_USER y SMTP_PASS, o Resend con RESEND_API_KEY y EMAIL_FROM',
@@ -21,7 +21,8 @@ class NotificationsService {
     const notification = await this.repository.claim(
       id,
       manual,
-      this.provider.idempotent !== false
+      this.provider.idempotent !== false,
+      createdFrom
     );
     if (!notification) return null;
     if (notification.blocked) {
@@ -47,10 +48,10 @@ class NotificationsService {
       message: failure?.message || 'Correo aceptado por el proveedor',
     };
   }
-  async processBatch(limit = 20) {
+  async processBatch(limit = 20, { createdFrom = null, deadline = Infinity } = {}) {
     const results = [];
-    for (let i = 0; i < limit; i++) {
-      const result = await this.send();
+    for (let i = 0; i < limit && Date.now() < deadline; i++) {
+      const result = await this.send(undefined, undefined, false, createdFrom);
       if (!result) break;
       results.push(result);
     }

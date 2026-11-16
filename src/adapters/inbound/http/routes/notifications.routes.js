@@ -1,18 +1,32 @@
 const express = require('express');
-const database = require('../../../../infrastructure/database/connection');
-const NotificationsRepository = require('../../../../adapters/outbound/persistence/postgres/notifications.repository');
-const NotificationsService = require('../../../../application/notifications/notifications.service');
+const { timingSafeEqual } = require('node:crypto');
 const { authenticateToken, requireRole } = require('../middleware/auth');
+const { service, processEmailOutbox } = require('../email-outbox');
 
 const router = express.Router();
-const createEmailProvider = require('../../../outbound/email/provider');
 const {
   numericId,
 } = require('../../../../application/assignments/case.service');
-const service = new NotificationsService(
-  new NotificationsRepository(database),
-  createEmailProvider()
-);
+router.get('/procesar-cola', async (req, res, next) => {
+  res.set('Cache-Control', 'no-store');
+  const secret = process.env.CRON_SECRET;
+  const supplied = Buffer.from(req.get('authorization') || '');
+  const expected = Buffer.from(`Bearer ${secret || ''}`);
+  if (
+    !secret ||
+    supplied.length !== expected.length ||
+    !timingSafeEqual(supplied, expected)
+  ) {
+    return res.status(401).json({ success: false });
+  }
+
+  try {
+    return res.json({ success: true, data: await processEmailOutbox() });
+  } catch (error) {
+    return next(error);
+  }
+});
+
 router.use(authenticateToken, requireRole(['admin', 'coordinator']));
 
 router.get('/', async (req, res, next) => {
@@ -27,7 +41,6 @@ router.get('/', async (req, res, next) => {
   }
 });
 
-module.exports = router;
 router.post('/:id/enviar', async (req, res, next) => {
   try {
     res.json({
@@ -38,3 +51,5 @@ router.post('/:id/enviar', async (req, res, next) => {
     next(error);
   }
 });
+
+module.exports = router;

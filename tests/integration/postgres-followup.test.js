@@ -59,6 +59,9 @@ const {
 const {
   generateToken,
 } = require("../../src/adapters/outbound/security/jwt.adapter");
+jest.mock("@vercel/functions", () => ({ waitUntil: jest.fn() }));
+const { waitUntil } = require("@vercel/functions");
+const { service: emailService } = require("../../src/adapters/inbound/http/email-outbox");
 const app = require("../../src/infrastructure/http/app");
 const matching = createMatchingService(new MatchingRepository(mockDatabase));
 const cases = new CaseRepository(mockDatabase);
@@ -157,6 +160,66 @@ run("seguimiento con PostgreSQL real", () => {
     const manager = new MigrationManager(pool);
     expect((await manager.migrate()).executed).toBe(0);
     expect((await manager.status()).pending).toHaveLength(0);
+  });
+  test("una asignación por HTTP envía avisos nuevos y el cron recupera el intento fallido", async () => {
+    const env = {
+      ...process.env,
+      CRON_SECRET: "secret-cron-of-the-isolated-test",
+      EMAIL_AUTOMATIC_FROM: new Date(Date.now() - 1000).toISOString(),
+    };
+    jest.replaceProperty(process, "env", env);
+    jest.spyOn(emailService.provider, "configured").mockReturnValue(true);
+    const send = jest.spyOn(emailService.provider, "send")
+      .mockRejectedValueOnce(new Error("SMTP temporal simulado"))
+      .mockResolvedValue("provider-confirmed");
+    const { rows: [historical] } = await pool.query(
+      `INSERT INTO notificaciones_email(email_destino,tipo_notificacion,asunto,fecha_creacion)
+      VALUES ('historico@example.test','prueba','Aviso anterior',CURRENT_TIMESTAMP - INTERVAL '1 day')
+      RETURNING id`,
+    );
+    const p = await patient("Prueba de correo automático");
+    const response = await request(app)
+      .post(`/api/matching/manual/${p.id}`)
+      .set("Authorization", `Bearer ${generateToken(admin)}`)
+      .send({
+        id_especialidad_estudiante: Number(student1.schedules[0].id),
+        motivo: "Prueba de envío después de asignar",
+      });
+    expect(response.status).toBe(201);
+    expect(waitUntil).toHaveBeenCalledTimes(1);
+    await waitUntil.mock.calls[0][0];
+
+    const id = response.body.data.assignmentId;
+    const notices = async () => (await pool.query(
+      "SELECT estado,intentos_envio,error_envio FROM notificaciones_email WHERE id_asignacion=$1 ORDER BY id",
+      [id],
+    )).rows;
+    expect(await notices()).toEqual([
+      { estado: "fallido", intentos_envio: 1, error_envio: "SMTP temporal simulado" },
+      { estado: "enviado", intentos_envio: 1, error_envio: null },
+    ]);
+    await pool.query(
+      "UPDATE notificaciones_email SET proximo_intento=CURRENT_TIMESTAMP WHERE id_asignacion=$1 AND estado='fallido'",
+      [id],
+    );
+    const endpoint = "/api/notificaciones/procesar-cola";
+    expect((await request(app).get(endpoint)).status).toBe(401);
+    expect(send).toHaveBeenCalledTimes(2);
+    const runCron = () => request(app).get(endpoint).set("Authorization", `Bearer ${env.CRON_SECRET}`);
+    expect((await runCron()).body).toMatchObject({ success: true, data: { sent: 1 } });
+    expect((await runCron()).body).toMatchObject({ success: true, data: { sent: 0 } });
+    expect(await notices()).toEqual([
+      { estado: "enviado", intentos_envio: 2, error_envio: null },
+      { estado: "enviado", intentos_envio: 1, error_envio: null },
+    ]);
+    expect(send).toHaveBeenCalledTimes(3);
+    expect((await pool.query(
+      "SELECT estado,intentos_envio FROM notificaciones_email WHERE id=$1", [historical.id],
+    )).rows).toEqual([{ estado: "pendiente", intentos_envio: 0 }]);
+    await assignments.update(id, {
+      estado: "cancelado", motivo_cancelacion: "Cierre de la prueba de correo",
+    }, admin);
+    await pool.query("DELETE FROM notificaciones_email WHERE id=$1", [historical.id]);
   });
   test("dos peticiones simultáneas crean una sola asignación activa", async () => {
     const p = await patient();

@@ -1,4 +1,5 @@
 const express = require('express');
+const { scheduleEmailOutbox } = require('../email-outbox');
 const rateLimit = require('express-rate-limit');
 const database = require('../../../../infrastructure/database/connection');
 const PatientRepository = require('../../../outbound/persistence/postgres/patient.repository');
@@ -27,6 +28,7 @@ const intakeLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20 });
 router.post('/intake', intakeLimiter, async (req, res, next) => {
   try {
     const result = await service.intake(req.body);
+    if (result.data.estudianteAsignado) scheduleEmailOutbox();
     return res.status(201).json({ success: true, ...result });
   } catch (error) {
     return next(error);

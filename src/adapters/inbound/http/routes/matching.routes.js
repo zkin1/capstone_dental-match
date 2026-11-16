@@ -1,4 +1,5 @@
 const express = require('express');
+const { scheduleEmailOutbox } = require('../email-outbox');
 const database = require('../../../../infrastructure/database/connection');
 const PatientRepository = require('../../../outbound/persistence/postgres/patient.repository');
 const MatchingRepository = require('../../../outbound/persistence/postgres/matching.repository');
@@ -119,6 +120,7 @@ router.post('/manual/:id', async (req, res, next) => {
       input,
       req.user
     );
+    if (result.success) scheduleEmailOutbox();
     res
       .status(result.success ? 201 : 409)
       .json({ success: result.success, data: result, message: result.reason });
@@ -129,6 +131,7 @@ router.post('/manual/:id', async (req, res, next) => {
 router.post('/auto', async (req, res, next) => {
   try {
     const result = await matching.executeAdvancedMatching();
+    if (result.matched > 0) scheduleEmailOutbox();
     res
       .status(result.success ? 200 : 409)
       .json({ success: result.success, data: result, message: result.reason });

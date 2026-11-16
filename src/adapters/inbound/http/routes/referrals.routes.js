@@ -1,4 +1,5 @@
 const express = require('express');
+const { scheduleEmailOutbox } = require('../email-outbox');
 const database = require('../../../../infrastructure/database/connection');
 const CaseRepository = require('../../../outbound/persistence/postgres/case.repository');
 const MatchingRepository = require('../../../outbound/persistence/postgres/matching.repository');
@@ -25,10 +26,9 @@ router.get('/', async (req, res, next) => {
 });
 router.post('/:id/revision', async (req, res, next) => {
   try {
-    res.json({
-      success: true,
-      data: await service.review(req.params.id, req.body, req.user),
-    });
+    const result = await service.review(req.params.id, req.body, req.user);
+    if (result.matching?.success) scheduleEmailOutbox();
+    res.json({ success: true, data: result });
   } catch (error) {
     next(error);
   }
