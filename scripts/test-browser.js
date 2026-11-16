@@ -29,6 +29,7 @@ async function run() {
       await container.getByLabel(/^Contraseña/).fill(server.password);
       await container.getByLabel(/^Confirmar contraseña/).fill(server.password);
       await container.getByLabel('Teléfono', { exact: true }).fill('900000001');
+      await container.getByLabel('Ciudad', { exact: true }).selectOption('Metropolitana');
       await container.getByText('Endodoncia', { exact: true }).click();
       await container.getByText('Lunes', { exact: true }).click();
       assert(await container.getByRole('checkbox', { name: 'Endodoncia', exact: true }).isChecked());
