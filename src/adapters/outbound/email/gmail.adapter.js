@@ -44,9 +44,16 @@ class GmailAdapter {
       }
       return result.messageId;
     } catch (cause) {
-      const error = new Error(
-        `No se pudo confirmar el correo con Gmail${cause.responseCode ? ` (SMTP ${cause.responseCode})` : ''}`
-      );
+      const status = Number.isInteger(cause.responseCode) ? ` (SMTP ${cause.responseCode})` : '';
+      let hint = '';
+      if (cause.code === 'EAUTH' || [534, 535].includes(cause.responseCode)) {
+        hint = '. Comprueba el remitente y su contraseña de aplicación en la API';
+      } else if (cause.command === 'CONN' || ['EDNS', 'ETLS'].includes(cause.code)) {
+        hint = '. La API no pudo establecer la conexión SMTP con Gmail';
+      } else if (cause.command === 'RCPT TO' || cause.uncertain === false) {
+        hint = '. Revisa la dirección del destinatario';
+      }
+      const error = new Error(`No se pudo confirmar el correo con Gmail${status}${hint}`);
       // Un rechazo explícito o un fallo anterior a DATA permite reintentar.
       error.uncertain =
         cause.uncertain ??
