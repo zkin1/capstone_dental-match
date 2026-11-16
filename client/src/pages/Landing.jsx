@@ -17,11 +17,12 @@ export default function Landing() {
         <nav className="landing-nav" aria-label="Navegación pública">
           <Link to="/landing" className="landing-brand" aria-label="Dental Match, inicio">
             <span className="landing-brand-mark"><Icon name="tooth" size={21} /></span>
-            <span>Dental Match</span>
+            <span className="landing-brand-label">Dental Match</span>
           </Link>
           <div className="landing-nav-actions">
-                <Link to="/login" className="landing-nav-button landing-nav-login">
-              Ya tengo una cuenta
+            <Link to="/login" className="landing-nav-button landing-nav-login" aria-label="Ya tengo una cuenta">
+              <span className="landing-nav-login-label">Ya tengo una cuenta</span>
+              <Icon name="user" size={20} className="landing-nav-login-icon" />
             </Link>
             <Link to="/registro-paciente" className="landing-nav-button landing-nav-cta">
               Contar mi caso
