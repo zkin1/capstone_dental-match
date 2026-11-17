@@ -17,12 +17,13 @@ function validateStudent(input, publicRegistration = false) {
   if (telefono && !/^\+?[0-9]{8,15}$/.test(telefono)) {
     return 'El teléfono debe tener entre 8 y 15 dígitos y puede comenzar con +';
   }
-  
+
   const required = ['nombre_completo', 'email', 'ciudad', 'año_carrera'];
   if (publicRegistration) required.push('password');
   if (required.some(field => !String(input[field] || '').trim())) {
     return 'Nombre, email, ciudad, año de carrera y contraseña son obligatorios';
   }
+  if (input.nombre_completo.trim().length < 2) return 'El nombre debe tener al menos 2 caracteres';
   if (emailSchema.validate(input.email).error) return 'El email no es válido';
   if (!['4to', '5to'].includes(input.año_carrera)) return 'El año de carrera debe ser 4to o 5to';
   if (!CITIES.includes(input.ciudad)) return 'La ciudad no es válida';

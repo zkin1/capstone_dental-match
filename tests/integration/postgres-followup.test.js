@@ -857,8 +857,9 @@ run("seguimiento con PostgreSQL real", () => {
           telefono: "912345678",
           ciudad: "Metropolitana",
           consentimiento_datos: true,
-          respuestas: { intensidad_dolor: 4, 
-          queja: 'Dolor persistente al masticar',
+          respuestas: {
+            intensidad_dolor: 4,
+            queja: "Dolor persistente al masticar",
           },
         });
       expect(result.status).toBe(201);

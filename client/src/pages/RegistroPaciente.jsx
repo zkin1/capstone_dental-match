@@ -73,6 +73,11 @@ export default function RegistroPaciente() {
 
   async function submit(e) {
     e.preventDefault();
+    const nombreCompleto = datos.nombre_completo.trim();
+    if (nombreCompleto.length < 2) {
+      setError('Escribe un nombre de al menos 2 caracteres.');
+      return;
+    }
     if (queja.trim().length < 10) {
       setError('Describe tu situación con al menos 10 caracteres.');
       return;
@@ -86,7 +91,7 @@ export default function RegistroPaciente() {
       const data = await apiFetch('/pacientes/intake', {
         method: 'POST',
         body: JSON.stringify({
-          nombre_completo: datos.nombre_completo,
+          nombre_completo: nombreCompleto,
           edad: datos.edad ? parseInt(datos.edad) : null,
           telefono: datos.telefono,
           email: datos.email,
@@ -150,12 +155,12 @@ export default function RegistroPaciente() {
 
           <h2 className="form-section-title"><Icon name="id-card" size={17} /> Datos personales</h2>
           <div className="form-grid">
-            <Input label="Nombre completo" required minLength={2} maxLength={120} pattern=".*\S.*" title="Escribe al menos 2 caracteres y no solo espacios." autoComplete="name" value={datos.nombre_completo} onChange={e => setDato('nombre_completo', e.target.value)} />
+            <Input label="Nombre completo" required minLength={2} maxLength={120} autoComplete="name" value={datos.nombre_completo} onChange={e => setDato('nombre_completo', e.target.value)} />
             <Input label="Teléfono" type="tel" required minLength={8} maxLength={16} pattern="[+]?[0-9]{8,15}" title="Ingresa de 8 a 15 dígitos; puedes anteponer +. Sin espacios ni letras." autoComplete="tel" value={datos.telefono} onChange={e => setDato('telefono', e.target.value)} />
-            <Input label="Email" type="email" maxLength={255} autoComplete="email" value={datos.email} onChange={e => setDato('email', e.target.value)} />
+            <Input label="Email" type="email" maxLength={255} pattern="\S+@\S+\.\S+" title="Ingresa un correo como nombre@ejemplo.cl." autoComplete="email" value={datos.email} onChange={e => setDato('email', e.target.value)} />
             <Input label="Edad" type="number" required min="1" max="120" value={datos.edad} onChange={e => setDato('edad', e.target.value)} />
             <Select label="Ciudad" required value={datos.ciudad} onChange={e => setDato('ciudad', e.target.value)}>
-              <option value="" disabled>Selecciona tu Comuna</option>
+              <option value="" disabled>Selecciona una ciudad</option>
               <option value="Metropolitana">Santiago</option>
               <option value="Valparaíso">Valparaíso</option>
               <option value="Concepción">Concepción</option>

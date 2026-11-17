@@ -1,33 +1,43 @@
 const { CITIES, normalizePriority, normalizeSpecialty } = require('../common');
 
-function validateBasePatient(input) {
+function validateBasePatient(input, maxNameLength = 150) {
   const age = Number(input.edad);
-  if (!input.nombre_completo?.trim() || !input.telefono?.trim() || !CITIES.includes(input.ciudad)) {
+  const name = typeof input.nombre_completo === 'string' ? input.nombre_completo.trim() : '';
+  const phone = typeof input.telefono === 'string' ? input.telefono.trim() : '';
+  const email = input.email ?? '';
+  if (!name || !phone || !CITIES.includes(input.ciudad)) {
     return { error: 'Nombre, teléfono y una ciudad válida son obligatorios' };
   }
-  if (!/^\+?[0-9]{8,15}$/.test(input.telefono.trim())) {
-  return { error: 'El teléfono debe tener entre 8 y 15 dígitos y puede comenzar con +' };
+  if (name.length < 2 || name.length > maxNameLength) {
+    return { error: `El nombre debe tener entre 2 y ${maxNameLength} caracteres` };
+  }
+  if (phone.length > 20) {
+    return { error: 'El teléfono debe tener hasta 20 caracteres' };
   }
   if (!Number.isInteger(age) || age < 1 || age > 120) {
     return { error: 'La edad debe estar entre 1 y 120 años' };
   }
-  if (input.email && !/^\S+@\S+\.\S+$/.test(input.email)) {
+  if (typeof email !== 'string' || email.length > 255 || (email && !/^\S+@\S+\.\S+$/.test(email))) {
     return { error: 'El email no es válido' };
   }
   return {
     value: {
-      nombre_completo: input.nombre_completo.trim(),
+      nombre_completo: name,
       edad: age,
-      telefono: input.telefono.trim(),
-      email: input.email?.trim().toLowerCase() || null,
+      telefono: phone,
+      email: email.trim().toLowerCase() || null,
       ciudad: input.ciudad,
     },
   };
 }
 
 function validateIntake(input) {
-  const base = validateBasePatient(input);
+  const base = validateBasePatient(input, 120);
   if (base.error) return base;
+
+  if (!/^\+?[0-9]{8,15}$/.test(base.value.telefono)) {
+    return { error: 'El teléfono debe tener entre 8 y 15 dígitos y puede comenzar con +' };
+  }
 
   if (input.consentimiento_datos !== true) {
     return { error: 'Debes aceptar el uso de datos para gestionar el caso' };
@@ -42,7 +52,7 @@ function validateIntake(input) {
   if (typeof queja !== 'string' || queja.trim().length < 10 || queja.length > 2000) {
     return { error: 'La descripción debe tener entre 10 y 2000 caracteres' };
   }
-  
+
   return { value: base.value, answers: input.respuestas };
 }
 
