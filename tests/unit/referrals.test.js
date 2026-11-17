@@ -203,11 +203,15 @@ test('el registro continúa aunque el puerto de IA lance un error', async () => 
     telefono: '912345678',
     ciudad: 'Metropolitana',
     consentimiento_datos: true,
-    respuestas: { intensidad_dolor: 7 },
+    respuestas: {
+    intensidad_dolor: 7,
+    queja: 'Dolor persistente al masticar',
+    },
   });
   expect(result.data.id).toBe(1);
   expect(repository.createFromIntake.mock.calls[0][2]).toEqual({
     intensidad_dolor: 7,
+    queja: 'Dolor persistente al masticar',
   });
 });
 

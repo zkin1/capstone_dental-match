@@ -102,7 +102,7 @@ async function run() {
 
     const patient = { nombre_completo: 'Paciente sintético de sistema', edad: 30,
       telefono: '900000001', email: 'patient@example.com', ciudad: 'Metropolitana',
-      consentimiento_datos: true, respuestas: { intensidad_dolor: 4 } };
+      consentimiento_datos: true, respuestas: { intensidad_dolor: 4, queja: 'Dolor persistente al masticar', }};
     await api('POST', '/pacientes/intake', { ...patient, consentimiento_datos: false }, '', 400);
     const intake = (await api('POST', '/pacientes/intake', patient, '', 201)).data.data;
     assert(intake.numeroCaso.startsWith('CASO-'));

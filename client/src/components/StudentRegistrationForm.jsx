@@ -15,7 +15,7 @@ export default function StudentRegistrationForm({ staff = false, onCreated }) {
   const [form, setForm] = useState({
     nombre_completo: '', año_carrera: '4to', telefono: '', email: '', universidad: '',
     password: '', confirmPassword: '',
-    ciudad: 'Metropolitana', casos_necesarios: 10,
+    ciudad: '', casos_necesarios: 10,
     especialidades: [], horarios: {},
   });
   const [loading, setLoading] = useState(false);
@@ -51,6 +51,11 @@ export default function StudentRegistrationForm({ staff = false, onCreated }) {
     e.preventDefault();
     setError('');
 
+    const nombreCompleto = form.nombre_completo.trim();
+    if (nombreCompleto.length < 2) {
+      setError('Escribe un nombre de al menos 2 caracteres.');
+      return;
+    }
     if (form.especialidades.length === 0) {
       setError('Selecciona al menos una especialidad.');
       return;
@@ -77,7 +82,7 @@ export default function StudentRegistrationForm({ staff = false, onCreated }) {
       const data = await apiFetch(staff ? '/estudiantes' : '/estudiantes/register', {
         method: 'POST',
         body: JSON.stringify({
-          nombre_completo: form.nombre_completo,
+          nombre_completo: nombreCompleto,
           año_carrera: form.año_carrera,
           telefono: form.telefono,
           email: form.email,
@@ -105,21 +110,22 @@ export default function StudentRegistrationForm({ staff = false, onCreated }) {
 
           <h2 className="form-section-title"><Icon name="id-card" size={17} /> Datos personales</h2>
           <div className="form-grid">
-            <Input label="Nombre completo" required value={form.nombre_completo} onChange={e => set('nombre_completo', e.target.value)} />
-            <Input label="Email" type="email" required value={form.email} onChange={e => set('email', e.target.value)} />
+            <Input label="Nombre completo" required minLength={2} maxLength={150} autoComplete="name" value={form.nombre_completo} onChange={e => set('nombre_completo', e.target.value)} />
+            <Input label="Email" type="email" required maxLength={255} autoComplete="email" value={form.email} onChange={e => set('email', e.target.value)} />
             <Input label="Contraseña" type="password" required minLength={8} autoComplete="new-password"
               hint="8 caracteres, con mayúscula, minúscula, número y símbolo."
               value={form.password} onChange={e => set('password', e.target.value)} />
             <Input label="Confirmar contraseña" type="password" required minLength={8} autoComplete="new-password"
               value={form.confirmPassword} onChange={e => set('confirmPassword', e.target.value)} />
-            <Input label="Teléfono" value={form.telefono} onChange={e => set('telefono', e.target.value)} />
+            <Input label="Teléfono" type="tel" minLength={8} maxLength={16} pattern="[+]?[0-9]{8,15}" title="Ingresa de 8 a 15 dígitos; puedes anteponer +. Sin espacios ni letras." autoComplete="tel" value={form.telefono} onChange={e => set('telefono', e.target.value)} />
             <Select label="Año de carrera" required value={form.año_carrera} onChange={e => set('año_carrera', e.target.value)}>
               <option value="4to">4to</option>
               <option value="5to">5to</option>
             </Select>
-            <Input label="Universidad" placeholder="Nombre de tu universidad" value={form.universidad} onChange={e => set('universidad', e.target.value)} />
+            <Input label="Universidad" maxLength={150} placeholder="Nombre de tu universidad" value={form.universidad} onChange={e => set('universidad', e.target.value)} />
             <Select label="Ciudad" required value={form.ciudad} onChange={e => set('ciudad', e.target.value)}>
-              <option value="Metropolitana">Metropolitana</option>
+              <option value="" disabled>Selecciona una ciudad</option>
+              <option value="Metropolitana">Santiago</option>
               <option value="Valparaíso">Valparaíso</option>
               <option value="Concepción">Concepción</option>
             </Select>

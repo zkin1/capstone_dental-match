@@ -151,6 +151,50 @@ describe('contrato HTTP del BFF', () => {
     expect(mockConnection.query).not.toHaveBeenCalled();
   });
 
+  test.each([
+    ['un nombre demasiado corto al quitar los espacios', { nombre_completo: ' A ' }, /nombre/],
+    ['un nombre de más de 120 caracteres', { nombre_completo: 'a'.repeat(121) }, /nombre/],
+    ['un teléfono enviado como número', { telefono: 912345678 }, /teléfono/],
+    ['un teléfono que contiene letras', { telefono: '91234567a' }, /teléfono/],
+    ['un correo inválido', { email: 'demo@example' }, /email/],
+    ['una descripción demasiado corta', { respuestas: { queja: 'Me duele' } }, /descripción/],
+    ['una descripción demasiado larga', { respuestas: { queja: 'a'.repeat(2001) } }, /descripción/],
+  ])('rechaza %s en el alta de pacientes', async (_case, fields, message) => {
+    const response = await request(app).post('/api/pacientes/intake').send({
+      nombre_completo: 'Paciente Demo',
+      edad: 30,
+      telefono: '912345678',
+      ciudad: 'Metropolitana',
+      consentimiento_datos: true,
+      respuestas: { queja: 'Dolor persistente al masticar' },
+      ...fields,
+    });
+    expect(response.status).toBe(400);
+    expect(response.body.error.message).toMatch(message);
+    expect(mockConnection.query).not.toHaveBeenCalled();
+  });
+
+  test.each([
+    ['un nombre demasiado corto al quitar los espacios', { nombre_completo: ' A ' }, /nombre/],
+    ['un teléfono que contiene letras', { telefono: '91234567a' }, /teléfono/],
+  ])('rechaza %s en el alta de estudiantes', async (_case, fields, message) => {
+    const response = await request(app).post('/api/estudiantes/register').send({
+      nombre_completo: 'Estudiante Demo',
+      email: 'student@example.com',
+      telefono: '912345678',
+      ciudad: 'Metropolitana',
+      año_carrera: '4to',
+      password: 'DentalDemo!2026',
+      confirmPassword: 'DentalDemo!2026',
+      especialidades: ['Endodoncia'],
+      horarios_disponibles: [{ dia: 'lunes', hora_inicio: '08:00', hora_fin: '12:00' }],
+      ...fields,
+    });
+    expect(response.status).toBe(400);
+    expect(response.body.error.message).toMatch(message);
+    expect(mockConnection.query).not.toHaveBeenCalled();
+  });
+
   test('impide que estudiantes accedan al dashboard administrativo', async () => {
     const token = generateToken({
       id: 2,
