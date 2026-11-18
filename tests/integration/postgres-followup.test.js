@@ -1220,4 +1220,69 @@ run("seguimiento con PostgreSQL real", () => {
     expect((await pool.query("SELECT * FROM users WHERE email='invalid@example.com'")).rows).toHaveLength(0);
     expect((await pool.query("SELECT * FROM estudiantes_odontologia WHERE email='invalid@example.com'")).rows).toHaveLength(0);
   });
+
+  test("disponibilidad agrupa por clínica, añade días, protege citas y conserva especialidades", async () => {
+    const created = await request(app).post('/api/estudiantes')
+      .set('Authorization', `Bearer ${generateToken(admin)}`)
+      .send(studentInput('availability-clinic@example.com'));
+    expect(created.status).toBe(201);
+    const studentId = created.body.data.id;
+    const owner = await users.findByEmail('availability-clinic@example.com');
+    const auth = `Bearer ${generateToken(owner)}`;
+    const endpoint = '/api/estudiantes/mi-disponibilidad';
+    const get = () => request(app).get(endpoint).set('Authorization', auth);
+    const mutate = (method, suffix, body) => request(app)[method](endpoint + suffix).set('Authorization', auth).send(body);
+    const clinic = 'Clínica Integral Adulto y Gerontología';
+    const added = { clinica: clinic, dias_semana: ['martes', 'jueves'], hora_inicio: '13:00', hora_fin: '17:00' };
+    const original = (await get()).body.data;
+    expect(original.horarios).toHaveLength(1);
+    expect(original.clinicas).toEqual([clinic]);
+    expect(original.horarios[0]).not.toHaveProperty('especialidad');
+    expect((await mutate('post', '/horarios', added)).status).toBe(201);
+    const data = (await get()).body.data;
+    expect(data.horarios).toHaveLength(3);
+    expect((await pool.query('SELECT * FROM especialidades_estudiante WHERE id_estudiante=$1 AND activo', [studentId])).rows).toHaveLength(6);
+    expect((await mutate('post', '/horarios', added)).status).toBe(409);
+    expect((await mutate('post', '/horarios', { ...added, clinica: 'Clínica para el Niño y Adolescente' })).status).toBe(409);
+    expect((await request(app).post(endpoint + '/horarios').set('Authorization', `Bearer ${generateToken(admin)}`).send(added)).status).toBe(403);
+    expect((await mutate('put', '/horarios/' + student1.schedules[0].id, {
+      dias_semana: ['viernes'], hora_inicio: '08:00', hora_fin: '12:00',
+    })).status).toBe(404);
+
+    const p = await patient('Cita conservada al cambiar disponibilidad');
+    const candidate = (await matching.candidates(p.id)).find(row =>
+      String(row.id_estudiante) === String(studentId) && row.dia_semana === 'martes');
+    expect(candidate).toBeDefined();
+    const assigned = await matching.manual(p.id, {
+      id_especialidad_estudiante: candidate.id_especialidad_estudiante,
+      motivo: 'Prueba de conservación de citas',
+    }, admin);
+    expect(assigned.success).toBe(true);
+    const before = (await pool.query('SELECT * FROM asignaciones WHERE id_paciente=$1', [p.id])).rows[0];
+    const tuesday = data.horarios.find(slot => slot.dia_semana === 'martes');
+    expect((await mutate('delete', '/horarios/' + tuesday.id)).status).toBe(200);
+    expect((await pool.query('SELECT * FROM asignaciones WHERE id=$1', [before.id])).rows[0]).toEqual(before);
+    expect((await pool.query('SELECT activo FROM especialidades_estudiante WHERE id=$1', [before.id_especialidad_estudiante])).rows[0].activo).toBe(false);
+
+    expect((await mutate('put', '/horarios/' + original.horarios[0].id, {
+      dia_semana: 'miercoles', hora_inicio: '10:00', hora_fin: '14:00',
+    })).status).toBe(200);
+    const edited = (await get()).body.data.horarios.find(slot => slot.dia_semana === 'miercoles');
+    expect(edited).toBeDefined();
+    expect((await mutate('put', '/horarios/' + edited.id, {
+      dias_semana: ['jueves', 'viernes'], hora_inicio: '12:00', hora_fin: '15:00',
+    })).status).toBe(409);
+    expect((await get()).body.data.horarios).toEqual(expect.arrayContaining([expect.objectContaining({ id: edited.id })]));
+    expect((await get()).body.data.horarios.some(slot => slot.dia_semana === 'viernes')).toBe(false);
+    for (const slot of (await get()).body.data.horarios) expect((await mutate('delete', '/horarios/' + slot.id)).status).toBe(200);
+    expect((await get()).body.data).toMatchObject({ horarios: [], clinicas: [clinic] });
+    expect((await mutate('post', '/horarios', {
+      ...added, dias_semana: ['lunes'], hora_inicio: '08:00', hora_fin: '12:00',
+    })).status).toBe(201);
+    const enabled = (await pool.query('SELECT especialidad,capacidad_pacientes FROM especialidades_estudiante WHERE id_estudiante=$1 AND activo ORDER BY especialidad', [studentId])).rows;
+    expect(enabled).toEqual([
+      { especialidad: 'Endodoncia', capacidad_pacientes: 1 },
+      { especialidad: 'Operatoria Dental', capacidad_pacientes: 1 },
+    ]);
+  });
 });

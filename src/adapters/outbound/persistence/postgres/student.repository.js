@@ -89,17 +89,22 @@ class StudentRepository {
     const db = await this.database.getConnection();
     const id = await this.activeStudentId(db, code);
     const schedules = await db.query(
-      `SELECT id,especialidad,clinica,dia_semana,hora_inicio,hora_fin
+      `SELECT MIN(id) AS id,clinica,dia_semana,hora_inicio,hora_fin
       FROM especialidades_estudiante WHERE id_estudiante=$1 AND activo=TRUE
-      ORDER BY especialidad,dia_semana,hora_inicio,id`,
+      GROUP BY clinica,dia_semana,hora_inicio,hora_fin
+      ORDER BY clinica,dia_semana,hora_inicio`,
       [id]
+    );
+    const clinics = await db.query(
+      'SELECT DISTINCT clinica FROM especialidades_estudiante WHERE id_estudiante=$1 ORDER BY clinica', [id]
     );
     const absences = await db.query(
       `SELECT fecha::text FROM ausencias_estudiante WHERE id_estudiante=$1
       AND fecha >= (CURRENT_TIMESTAMP AT TIME ZONE 'America/Santiago')::date ORDER BY fecha`,
       [id]
     );
-    return { horarios: schedules.rows, ausencias: absences.rows.map(row => row.fecha) };
+    return { horarios: schedules.rows, clinicas: clinics.rows.map(row => row.clinica),
+      ausencias: absences.rows.map(row => row.fecha) };
   }
 
   async activeStudentId(db, code) {
@@ -111,29 +116,70 @@ class StudentRepository {
     return result.rows[0].id;
   }
 
-  updateSchedule(code, scheduleId, { dia_semana, hora_inicio, hora_fin }) {
+  async scheduleGroup(db, id, scheduleId) {
+    const result = await db.query(
+      `SELECT e.id,e.especialidad,e.clinica,e.capacidad_pacientes FROM especialidades_estudiante e
+      JOIN especialidades_estudiante selected ON selected.id=$2 AND selected.id_estudiante=$1
+        AND selected.activo=TRUE AND e.id_estudiante=selected.id_estudiante
+        AND e.clinica=selected.clinica AND e.dia_semana=selected.dia_semana
+        AND e.hora_inicio=selected.hora_inicio AND e.hora_fin=selected.hora_fin
+      WHERE e.activo=TRUE FOR UPDATE OF e`, [id, scheduleId]
+    );
+    if (!result.rows.length) throw new NotFoundError('Horario');
+    return result.rows;
+  }
+
+  createSchedule(code, input) { return this.saveSchedule(code, null, input); }
+
+  updateSchedule(code, scheduleId, input) { return this.saveSchedule(code, scheduleId, input); }
+
+  saveSchedule(code, scheduleId, { clinica, dias_semana, hora_inicio, hora_fin }) {
     return this.database.transaction(async db => {
       await db.query("SELECT pg_advisory_xact_lock(hashtext('dental_match_allocation'))");
       const id = await this.activeStudentId(db, code);
-      const schedule = await db.query(
-        `SELECT especialidad FROM especialidades_estudiante
-        WHERE id=$1 AND id_estudiante=$2 AND activo=TRUE FOR UPDATE`,
-        [scheduleId, id]
-      );
-      if (!schedule.rows.length) throw new NotFoundError('Horario');
+      const previous = scheduleId ? await this.scheduleGroup(db, id, scheduleId) : [];
+      const templates = previous.length ? previous : (await db.query(
+        `SELECT DISTINCT ON (especialidad) especialidad,clinica,capacidad_pacientes
+        FROM especialidades_estudiante WHERE id_estudiante=$1 AND clinica=$2
+        ORDER BY especialidad,activo DESC,id DESC`, [id, clinica]
+      )).rows;
+      if (!templates.length) throw new ConflictError('La clínica no está habilitada en tu perfil');
+      const previousIds = previous.map(row => row.id);
       const overlap = await db.query(
         `SELECT 1 FROM especialidades_estudiante WHERE id_estudiante=$1
-        AND especialidad=$2 AND dia_semana=$3 AND id<>$6
-        AND (activo OR (hora_inicio=$4 AND hora_fin=$5))
-        AND hora_inicio<$5 AND hora_fin>$4`,
-        [id, schedule.rows[0].especialidad, dia_semana, hora_inicio, hora_fin, scheduleId]
+        AND activo=TRUE AND dia_semana=ANY($2::text[]) AND NOT (id=ANY($5::bigint[]))
+        AND hora_inicio<$4::time AND hora_fin>$3::time LIMIT 1`,
+        [id, dias_semana, hora_inicio, hora_fin, previousIds]
       );
       if (overlap.rows.length)
-        throw new ConflictError('Ya tienes un horario que se cruza para esta especialidad');
+        throw new ConflictError('Ese horario se cruza con otro bloque de atención');
+      // Archive rather than delete: existing appointments keep their original schedule reference.
       await db.query(
-        `UPDATE especialidades_estudiante SET dia_semana=$1,hora_inicio=$2,hora_fin=$3,
-        fecha_actualizacion=CURRENT_TIMESTAMP WHERE id=$4`,
-        [dia_semana, hora_inicio, hora_fin, scheduleId]
+        `UPDATE especialidades_estudiante SET activo=FALSE,fecha_actualizacion=CURRENT_TIMESTAMP
+        WHERE id=ANY($1::bigint[])`, [previousIds]
+      );
+      for (const template of templates) for (const day of dias_semana) {
+        await db.query(
+          `INSERT INTO especialidades_estudiante
+          (id_estudiante,especialidad,clinica,dia_semana,hora_inicio,hora_fin,capacidad_pacientes,activo)
+          VALUES ($1,$2,$3,$4,$5,$6,$7,TRUE)
+          ON CONFLICT ON CONSTRAINT uq_especialidad_horario DO UPDATE SET activo=TRUE,
+          clinica=EXCLUDED.clinica,capacidad_pacientes=EXCLUDED.capacidad_pacientes,
+          fecha_actualizacion=CURRENT_TIMESTAMP`,
+          [id, template.especialidad, template.clinica, day, hora_inicio, hora_fin, template.capacidad_pacientes]
+        );
+      }
+    });
+  }
+
+  removeSchedule(code, scheduleId) {
+    return this.database.transaction(async db => {
+      await db.query("SELECT pg_advisory_xact_lock(hashtext('dental_match_allocation'))");
+      const id = await this.activeStudentId(db, code);
+      const group = await this.scheduleGroup(db, id, scheduleId);
+      await db.query(
+        `UPDATE especialidades_estudiante SET activo=FALSE,fecha_actualizacion=CURRENT_TIMESTAMP
+        WHERE id=ANY($1::bigint[])`, [group.map(row => row.id)]
       );
     });
   }

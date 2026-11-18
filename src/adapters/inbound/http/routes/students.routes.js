@@ -45,9 +45,23 @@ router.get('/mi-disponibilidad', ...studentOnly, async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
+router.post('/mi-disponibilidad/horarios', ...studentOnly, async (req, res, next) => {
+  try {
+    await service.createSchedule(req.user.codigo_estudiante, req.body);
+    res.status(201).json({ success: true });
+  } catch (error) { next(error); }
+});
+
 router.put('/mi-disponibilidad/horarios/:id', ...studentOnly, async (req, res, next) => {
   try {
     await service.updateSchedule(req.user.codigo_estudiante, req.params.id, req.body);
+    res.json({ success: true });
+  } catch (error) { next(error); }
+});
+
+router.delete('/mi-disponibilidad/horarios/:id', ...studentOnly, async (req, res, next) => {
+  try {
+    await service.removeSchedule(req.user.codigo_estudiante, req.params.id);
     res.json({ success: true });
   } catch (error) { next(error); }
 });

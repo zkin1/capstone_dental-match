@@ -3,6 +3,24 @@ const {
   DAYS, validateStudent, normalizeSpecialties, validateStaffUpdate,
 } = require('../../domain/students/student.validation');
 
+function scheduleInput(input) {
+  const { dia_semana, dias_semana, hora_inicio, hora_fin } = input || {};
+  const days = dias_semana === undefined ? [dia_semana] : dias_semana;
+  const clock = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
+  if (!Array.isArray(days) || !days.length || days.length > DAYS.length ||
+      days.some(day => !DAYS.includes(day)) || new Set(days).size !== days.length ||
+      typeof hora_inicio !== 'string' || typeof hora_fin !== 'string' ||
+      !clock.test(hora_inicio) || !clock.test(hora_fin) || hora_inicio >= hora_fin)
+    throw new ValidationError('Selecciona al menos un día y una hora de inicio anterior al término');
+  return { dias_semana: days, hora_inicio, hora_fin };
+}
+
+function parseScheduleId(value) {
+  const id = Number(value);
+  if (!Number.isSafeInteger(id) || id < 1) throw new ValidationError('Horario inválido');
+  return id;
+}
+
 class StudentService {
   constructor({ repository, passwordHasher }) {
     this.repository = repository;
@@ -35,14 +53,18 @@ class StudentService {
   }
 
   updateSchedule(code, scheduleId, input) {
-    const id = Number(scheduleId);
-    const { dia_semana, hora_inicio, hora_fin } = input || {};
-    const clock = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
-    if (!Number.isSafeInteger(id) || id < 1 || !DAYS.includes(dia_semana) ||
-        typeof hora_inicio !== 'string' || typeof hora_fin !== 'string' ||
-        !clock.test(hora_inicio) || !clock.test(hora_fin) || hora_inicio >= hora_fin)
-      throw new ValidationError('Selecciona un día y un horario con inicio anterior al término');
-    return this.repository.updateSchedule(code, id, { dia_semana, hora_inicio, hora_fin });
+    return this.repository.updateSchedule(code, parseScheduleId(scheduleId), scheduleInput(input));
+  }
+
+  createSchedule(code, input) {
+    const schedule = scheduleInput(input);
+    if (typeof input.clinica !== 'string' || !input.clinica.trim() || input.clinica.length > 80)
+      throw new ValidationError('Selecciona una clínica habilitada en tu perfil');
+    return this.repository.createSchedule(code, { ...schedule, clinica: input.clinica.trim() });
+  }
+
+  removeSchedule(code, id) {
+    return this.repository.removeSchedule(code, parseScheduleId(id));
   }
 
   updateAbsence(code, date, blocked) {

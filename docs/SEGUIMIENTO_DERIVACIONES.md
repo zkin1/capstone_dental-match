@@ -40,6 +40,14 @@ Los registros de caso, cambios de estado, notas, revisiones, derivaciones, reasi
 
 La migración incorpora un punto de partida para las asignaciones existentes. No reconstruye cambios anteriores que el sistema no guardaba. Los cambios de asignación y derivación se serializan mediante un bloqueo transaccional de operación, además del bloqueo del paciente y de los estudiantes. Una restricción única impide tener dos asignaciones activas por paciente. La carga real se vuelve a contar después de adquirir el bloqueo del estudiante.
 
+## Disponibilidad por clínica
+
+El portal estudiantil muestra cada bloque una sola vez por clínica, día y horario. Desde **Mi disponibilidad** se pueden añadir varios días de atención, cambiar un bloque, quitarlo y bloquear o desbloquear fechas de ausencia. Las especialidades y capacidades se conservan internamente para el matching.
+
+Los cambios de un bloque se guardan en una transacción y rechazan cruces con otros horarios. Al cambiar o quitar un bloque se conservan los registros necesarios para las citas ya asignadas; la disponibilidad nueva se aplica a futuras asignaciones. Solo se pueden usar las clínicas habilitadas en el propio perfil.
+
+La API incorpora `POST /api/estudiantes/mi-disponibilidad/horarios` y `DELETE /api/estudiantes/mi-disponibilidad/horarios/:id`. La edición admite varios días y mantiene compatibilidad con el campo anterior `dia_semana`. No se requiere una migración de base de datos.
+
 ## Activación
 
 Con las variables de la base objetivo configuradas y un respaldo disponible:

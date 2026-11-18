@@ -1,0 +1,78 @@
+.availability-page { max-width: 1060px; container-type: inline-size; }
+.availability-page .availability-header { flex-direction: row; align-items: center; margin-bottom: 32px; }
+.availability-header > div { min-width: 0; }
+.availability-page .availability-header h1 { font-size: clamp(1.75rem, 3vw, 2.5rem); font-weight: 600; line-height: 1.18; }
+.availability-page .btn { box-shadow: none; border-radius: 8px; }
+.availability-page .btn:hover:not(:disabled) { transform: none; box-shadow: none; }
+.availability-page .btn:focus-visible { outline: 2px solid var(--dm-primary-700); outline-offset: 3px; }
+.availability-page .btn-primary { background: var(--dm-action); }
+.availability-page .btn-secondary { border-color: rgb(0 0 0 / 16%); }
+.availability-page .btn-secondary:hover:not(:disabled) { background: rgb(0 0 0 / 5%); border-color: rgb(0 0 0 / 28%); }
+.availability-section { margin-bottom: 36px; }
+.availability-section-heading { margin-bottom: 18px; }
+.availability-section-heading h2 { font-size: 1.125rem; font-weight: 600; margin-bottom: 6px; }
+.availability-section-heading p { color: var(--dm-text-muted); font-size: .875rem; line-height: 1.6; }
+.availability-clinic { padding: 24px; background: #fff; border: 1px solid rgb(0 0 0 / 10%); border-radius: 12px; }
+.availability-clinic + .availability-clinic { margin-top: 16px; }
+.availability-clinic h3 { font-size: 1rem; font-weight: 600; line-height: 1.5; margin-bottom: 10px; }
+.availability-slots, .availability-dates { list-style: none; margin: 0; padding: 0; }
+.availability-slot { display: grid; grid-template-columns: minmax(110px, .7fr) minmax(135px, 1fr) auto; align-items: center; gap: 18px; padding: 20px 0; }
+.availability-slot + .availability-slot { border-top: 1px solid rgb(0 0 0 / 8%); }
+.availability-slot:last-child { padding-bottom: 0; }
+.availability-slot-day { display: flex; align-items: center; gap: 10px; font-size: .9375rem; }
+.availability-slot-day .dm-icon { color: var(--dm-text-muted); flex-shrink: 0; }
+.availability-slot-time { font-size: 1rem; font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.availability-slot-actions { display: flex; align-items: center; gap: 6px; }
+.availability-slot-actions .btn { font-size: .875rem; padding: 10px 14px; }
+.availability-page .availability-remove { color: var(--dm-danger-text); }
+.availability-page .availability-remove:hover:not(:disabled) { background: var(--dm-danger-bg); }
+.availability-empty { padding: 18px 0 4px; color: var(--dm-text-muted); font-size: .9375rem; line-height: 1.6; }
+.availability-empty p + p { margin-top: 6px; }
+.availability-loading { padding: 32px 0; color: var(--dm-text-muted); }
+.availability-absences { padding-top: 4px; }
+.availability-absence-form { display: flex; align-items: flex-end; gap: 12px; max-width: 540px; }
+.availability-absence-form .field { flex: 1; margin: 0; min-width: 0; }
+.availability-absence-form .btn { white-space: nowrap; }
+.availability-empty-dates { color: var(--dm-text-muted); margin-top: 16px; font-size: .875rem; }
+.availability-dates { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+.availability-dates li { display: flex; align-items: center; gap: 8px; border: 1px solid rgb(0 0 0 / 12%); border-radius: 8px; padding: 3px 5px 3px 14px; background: #fff; font-size: .875rem; }
+.availability-dates .btn { padding: 10px; min-width: 44px; }
+.availability-page .modal { max-width: 550px; border: 1px solid rgb(0 0 0 / 12%); box-shadow: 0 18px 54px rgb(0 0 0 / 18%); }
+.availability-editor-description { margin: 0 0 22px; color: var(--dm-text-muted); font-size: .9375rem; line-height: 1.6; }
+.availability-editor-clinic { margin: 0 0 24px; }
+.availability-editor-clinic dt { font-size: .875rem; font-weight: 600; margin-bottom: 6px; }
+.availability-editor-clinic dd { font-size: 1rem; line-height: 1.5; }
+.availability-days { margin: 4px 0 24px; padding: 0; border: 0; min-width: 0; }
+.availability-days legend { margin-bottom: 10px; font-size: .875rem; font-weight: 600; }
+.availability-days > div { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.availability-days label { display: flex; align-items: center; gap: 9px; padding: 12px 10px; min-height: 46px; border: 1px solid rgb(0 0 0 / 16%); border-radius: 8px; cursor: pointer; font-size: .875rem; }
+.availability-days label:has(input:checked) { border-color: var(--dm-primary-700); background: var(--dm-primary-50); }
+.availability-days label:has(input:focus-visible) { outline: 2px solid var(--dm-primary-700); outline-offset: 3px; }
+.availability-days input { width: 16px; height: 16px; accent-color: var(--dm-primary-700); }
+.availability-time-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.availability-editor-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; }
+@media (max-width: 700px) {
+  .availability-page .availability-header { flex-direction: column; align-items: stretch; margin-bottom: 28px; }
+  .availability-header > .btn { width: 100%; }
+  .availability-clinic { padding: 20px; }
+  .availability-slot { grid-template-columns: 1fr auto; gap: 12px; padding: 20px 0; }
+  .availability-slot-actions { grid-column: 1 / -1; justify-content: flex-start; }
+  .availability-slot-actions .btn-secondary { flex: 1; }
+  .availability-absence-form { flex-direction: column; align-items: stretch; }
+  .availability-days > div { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 360px) {
+  .availability-clinic { padding: 16px; }
+  .availability-slot { column-gap: 8px; }
+  .availability-slot-day { gap: 6px; font-size: .875rem; }
+  .availability-slot-time { font-size: .9375rem; }
+  .availability-editor-actions .btn { padding-inline: 12px; font-size: .875rem; white-space: nowrap; }
+}
+@container (max-width: 650px) {
+  .availability-page .availability-header { flex-direction: column; align-items: stretch; }
+  .availability-header > .btn { width: 100%; }
+  .availability-slot { grid-template-columns: 1fr auto; gap: 12px; }
+  .availability-slot-actions { grid-column: 1 / -1; }
+  .availability-slot-actions .btn-secondary { flex: 1; }
+  .availability-absence-form { flex-direction: column; align-items: stretch; }
+}
