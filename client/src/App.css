@@ -569,10 +569,12 @@ tbody tr:hover { background: var(--dm-surface-sunken); }
    ========================================================================== */
 .landing-v2 { background: #f3f0e9; }
 .landing-v2 .landing-hero {
-  min-height: min(860px, 100svh);
+  position: relative;
+  min-height: 100svh;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  gap: 24px;
   overflow: hidden;
   isolation: isolate;
   padding: 26px clamp(20px, 5vw, 76px) 28px;
@@ -589,7 +591,7 @@ tbody tr:hover { background: var(--dm-surface-sunken); }
 .landing-v2 .landing-nav-actions a { color: #f6f8f5; }
 .landing-nav-cta { display: inline-flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--dm-teal-500); padding-bottom: 5px; }
 .landing-v2 .landing-hero-content { justify-content: flex-start; text-align: center; }
-.landing-v2 .landing-copy { width: min(54vw, 730px); max-width: 730px; margin: 0; text-align: center; }
+.landing-v2 .landing-copy { width: min(54vw, 730px); min-width: 0; margin: 0; text-align: center; }
 .landing-v2 .landing-hero h1,
 .landing-v2 .landing-tagline { margin-left: auto; margin-right: auto; }
 .landing-v2 .landing-cta { justify-content: center; }
@@ -601,8 +603,8 @@ tbody tr:hover { background: var(--dm-surface-sunken); }
 .landing-v2 .landing-nav-actions .landing-nav-cta:hover { border-color: var(--dm-action-hover); background: var(--dm-action-hover); transform: translateY(-1px); }
 .landing-v2 .landing-nav-actions .landing-nav-button:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
 .landing-v2 .landing-hero-content { width: 100%; max-width: 1360px; margin: auto; display: flex; align-items: center; }
-.landing-v2 .landing-copy { max-width: 730px; animation: landing-copy-in 900ms var(--dm-ease-out) 120ms both; }
-.landing-v2 .landing-hero h1 { max-width: 720px; margin-bottom: 24px; font-size: clamp(3.7rem, 8vw, 7.6rem); line-height: .92; letter-spacing: -.065em; text-wrap: balance; }
+.landing-v2 .landing-copy { animation: landing-copy-in 900ms var(--dm-ease-out) 120ms both; }
+.landing-v2 .landing-hero h1 { max-width: 720px; margin-bottom: 24px; font-size: clamp(3rem, 6vw, 6.75rem); line-height: 1; letter-spacing: -.055em; text-wrap: balance; }
 .landing-v2 .landing-tagline { max-width: 48ch; margin-bottom: 30px; color: #e2ecef; font-size: 1.08rem; line-height: 1.55; }
 .landing-v2 .landing-cta { align-items: center; gap: 24px; }
 .landing-v2 .btn-cta { padding: 15px 20px; }
@@ -708,19 +710,19 @@ tbody tr:hover { background: var(--dm-surface-sunken); }
 .landing-footer-brand .landing-brand-mark { width: 32px; height: 32px; }
 
 @media (max-width: 900px) {
-  .landing-v2 .landing-hero { min-height: 720px; }
   .landing-v2 .landing-hero-image { object-position: 62% center; }
   .landing-hero-tint { background: linear-gradient(90deg, rgba(8,25,42,.96) 0%, rgba(8,25,42,.78) 62%, rgba(8,25,42,.35) 100%), linear-gradient(0deg, rgba(8,25,42,.62), transparent 45%); }
+  .landing-v2 .landing-hero-content { justify-content: center; }
+  .landing-v2 .landing-copy { width: min(100%, 560px); }
   .landing-v2 .landing-intro { grid-template-columns: 1fr; }
   .landing-detail-image { max-width: 680px; }
 }
 
 @media (max-width: 640px) {
   .landing-v2 .landing-hero {
-    position: relative;
-    min-height: 100svh;
     gap: clamp(24px, 5svh, 44px);
-    padding: 16px 16px 24px;
+    padding-block: 16px 24px;
+    padding-inline: max(16px, env(safe-area-inset-left, 0px)) max(16px, env(safe-area-inset-right, 0px));
   }
   .landing-v2 .landing-hero-image { object-position: 70% center; }
   .landing-v2 .landing-hero-tint { background: linear-gradient(180deg, rgba(8,25,42,.65), rgba(8,25,42,.78) 48%, rgba(8,25,42,.94)); }
@@ -730,7 +732,6 @@ tbody tr:hover { background: var(--dm-surface-sunken); }
   .landing-v2 .landing-nav-actions .landing-nav-cta { display: none; }
   .landing-v2 .landing-nav-login-icon { display: block; }
   .landing-v2 .landing-nav-actions .landing-nav-login { width: 44px; height: 44px; padding: 0; }
-  .landing-v2 .landing-hero-content { justify-content: center; }
   .landing-v2 .landing-copy { width: min(100%, 480px); }
   .landing-v2 .landing-hero h1 {
     margin-bottom: 16px;
