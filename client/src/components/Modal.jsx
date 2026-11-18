@@ -7,6 +7,12 @@ import Icon from './Icon';
 // backdrop cierra, foco restaurado al cerrar.
 export default function Modal({ open, title, children, footer, onClose }) {
   const ref = useRef(null);
+  const onCloseRef = useRef(onClose);
+
+  // Cambiar los campos no debe reiniciar el foco del diálogo.
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     if (!open) return;
@@ -21,7 +27,7 @@ export default function Modal({ open, title, children, footer, onClose }) {
 
     function onKeyDown(e) {
       if (e.key === 'Escape') {
-        onClose();
+        onCloseRef.current();
         return;
       }
       if (e.key !== 'Tab') return;
@@ -42,7 +48,7 @@ export default function Modal({ open, title, children, footer, onClose }) {
       document.removeEventListener('keydown', onKeyDown);
       previous?.focus?.();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
 
