@@ -128,10 +128,11 @@
   max-width: 44rem;
   margin-top: 1.25rem;
   padding: .85rem 1rem;
-  border-left: 3px solid #507765;
-  background: #eef3ec;
-  color: #263b33;
+  border-radius: .65rem;
+  background: #eef4fc;
+  color: var(--landing-soft);
 }
+.dm-tariff-free strong { color: #264873; }
 .dm-tariff-free p { margin-top: .3rem; font-size: .875rem; }
 .dm-landing-disclosure { border-bottom: 1px solid var(--landing-line); }
 .dm-landing-disclosure summary { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-block: 1rem; min-height: 44px; cursor: pointer; list-style: none; }
@@ -172,6 +173,38 @@
 .dm-landing-terms section { margin-top: 1.75rem; }
 .dm-landing-terms h2 { font-size: 1.5rem; letter-spacing: -.04em; margin-bottom: .65rem; }
 .dm-landing-terms p { color: var(--landing-soft); }
+
+@media (min-width: 721px) {
+  .dm-landing-cover-image {
+    inset: 50% max(0px, calc((100% - 92rem) / 2)) auto auto;
+    width: auto;
+    max-width: 65%;
+    height: 100%;
+    object-fit: contain;
+    object-position: right center;
+    transform: translateY(-50%);
+    mask-image:
+      linear-gradient(90deg, transparent, black 25%, black 87%, transparent),
+      linear-gradient(180deg, transparent, black 12%, black 85%, transparent);
+    mask-composite: intersect;
+  }
+  .dm-landing-cover::after {
+    background:
+      linear-gradient(180deg, rgb(8 18 36 / 80%), rgb(8 18 36 / 50%) 3.75rem, transparent 7.5rem),
+      linear-gradient(90deg, rgb(8 18 36 / 40%), transparent 75%);
+  }
+  .dm-landing-hero { padding-block: clamp(2.25rem, min(5vw, 7vh), 4.25rem); }
+  .dm-landing-hero h1 {
+    max-width: min(39rem, 62%);
+    margin-top: .9rem;
+    font-size: clamp(2.9rem, min(6.5vw, 9.5vh), 5.4rem);
+    line-height: .99;
+    text-wrap: balance;
+  }
+  .dm-landing-start { margin-top: 1.5rem; }
+  .dm-landing-intro-grid { padding-block: clamp(2.5rem, 4.5vw, 4rem); }
+  .dm-landing-intro h2 { font-size: clamp(2rem, 3.4vw, 2.75rem); }
+}
 
 @media (max-width: 720px) {
   .dm-landing { --landing-space: 2.5rem; }
