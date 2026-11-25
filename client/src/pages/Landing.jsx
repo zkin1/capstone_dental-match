@@ -1,18 +1,8 @@
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import DentalPriceCompare from '../components/DentalPriceCompare';
 import Icon from '../components/Icon';
 import { usePageTitle } from '../hooks/usePageTitle';
 import './Landing.css';
-
-const motivos = [
-  'Me duele una muela',
-  'Necesito una limpieza',
-  'Tengo una tapadura rota',
-  'Me sangran las encías',
-  'Quiero una revisión',
-  'Me falta una pieza',
-];
 
 const preguntas = [
   ['¿Quién me atiende?', 'La atención la realizan estudiantes de odontología en formación clínica, bajo la supervisión de docentes.'],
@@ -23,15 +13,6 @@ const preguntas = [
 
 export default function Landing() {
   usePageTitle('Bienvenido');
-  const [seleccion, setSeleccion] = useState([]);
-  const registroState = { quejaInicial: seleccion.join('. ') };
-
-  function toggleMotivo(motivo) {
-    setSeleccion(actual => actual.includes(motivo)
-      ? actual.filter(item => item !== motivo)
-      : [...actual, motivo]);
-  }
-
   return (
     <div className="dm-landing">
       <a className="skip-link" href="#landing-heading">Ir al contenido</a>
@@ -61,22 +42,8 @@ export default function Landing() {
             <p className="dm-landing-kicker">Atención dental supervisada en clínicas universitarias</p>
             <h1 id="landing-heading" tabIndex={-1}>Hola. <span>¿Qué te</span> está pasando?</h1>
             <p className="dm-landing-mobile-only dm-landing-mobile-intro">Buscamos una opción de atención con estudiantes de odontología bajo supervisión clínica.</p>
-            <fieldset className="dm-landing-motives">
-              <legend className="visually-hidden">¿Qué te está pasando?</legend>
-              {motivos.map(motivo => (
-                <button
-                  type="button"
-                  key={motivo}
-                  aria-pressed={seleccion.includes(motivo)}
-                  onClick={() => toggleMotivo(motivo)}
-                >
-                  {motivo}
-                </button>
-              ))}
-            </fieldset>
             <div className="dm-landing-start">
-              <Link to="/registro-paciente" state={registroState} className="dm-landing-button">Contar mi caso <span aria-hidden="true">→</span></Link>
-              <p>Si quieres, elige uno o más motivos antes de continuar.</p>
+              <Link to="/registro-paciente" className="dm-landing-button">Contar mi caso <span aria-hidden="true">→</span></Link>
             </div>
           </section>
         </div>
@@ -127,7 +94,7 @@ export default function Landing() {
         <section className="dm-landing-close">
           <div className="dm-landing-wrap">
             <h2>Cuéntanos qué te pasa.<br /> Nosotros buscamos el siguiente paso.</h2>
-            <Link to="/registro-paciente" state={registroState} className="dm-landing-button">Contar mi caso <span aria-hidden="true">→</span></Link>
+            <Link to="/registro-paciente" className="dm-landing-button">Contar mi caso <span aria-hidden="true">→</span></Link>
           </div>
         </section>
       </main>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { TRIAJE_FEATURES, TRIAJE_SECTIONS, buildRespuestasIniciales } from '../data/triajeFeatures';
@@ -38,10 +38,9 @@ function esVisible(feature, respuestas) {
 
 export default function RegistroPaciente() {
   usePageTitle('Cuéntanos tu caso');
-  const { state } = useLocation();
   useEffect(() => { window.scrollTo(0, 0); }, []);
   const [datos, setDatos] = useState({ nombre_completo: '', edad: '', telefono: '', email: '', ciudad: '' });
-  const [queja, setQueja] = useState(() => typeof state?.quejaInicial === 'string' ? state.quejaInicial : '');
+  const [queja, setQueja] = useState('');
   const [respuestas, setRespuestas] = useState(buildRespuestasIniciales);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');

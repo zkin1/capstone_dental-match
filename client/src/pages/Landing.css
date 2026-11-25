@@ -26,7 +26,7 @@
 .dm-landing :focus-visible { outline: 2px solid var(--landing-blue); outline-offset: 4px; }
 .dm-landing-kicker { color: var(--landing-blue); font-size: .875rem; }
 .dm-landing-muted { color: var(--landing-soft); }
-.dm-landing-mobile-only, .dm-tariff-select { display: none; }
+.dm-landing-mobile-only, .dm-tariff-accordion { display: none; }
 
 .dm-landing-nav, .dm-landing-footer > div {
   display: flex;
@@ -84,21 +84,7 @@
 .dm-landing-hero { padding-block: var(--landing-space); }
 .dm-landing-hero h1 { font-size: clamp(3rem, 7.5vw, 6.8rem); line-height: .97; max-width: 44rem; margin-top: 1.5rem; }
 .dm-landing-hero h1 span { color: #dce6f1; }
-.dm-landing-motives { display: flex; flex-wrap: wrap; gap: .5rem; max-width: 43rem; margin-top: clamp(2rem, 4.5vw, 3.5rem); border: 0; min-inline-size: 0; }
-.dm-landing-motives button {
-  min-height: 44px;
-  padding: .55rem 1.1rem;
-  border: 1px solid rgb(255 255 255 / 58%);
-  border-radius: 999px;
-  background: rgb(12 22 42 / 52%);
-  color: inherit;
-  font: inherit;
-  cursor: pointer;
-}
-.dm-landing-motives button:hover { border-color: white; }
-.dm-landing-motives button[aria-pressed="true"] { border-color: white; background: white; color: var(--landing-ink); font-weight: 700; }
-.dm-landing-start { display: flex; align-items: center; flex-wrap: wrap; gap: .8rem 1.5rem; margin-top: 2rem; }
-.dm-landing-start p { color: #edf2fa; font-size: .875rem; }
+.dm-landing-start { margin-top: 2rem; }
 .dm-landing .dm-landing-button {
   display: inline-flex;
   align-items: center;
@@ -138,6 +124,15 @@
 .dm-tariff-fill.university { background: var(--landing-blue); }
 .dm-tariff-note { font-size: .8125rem; color: var(--landing-soft); max-width: 78ch; }
 .dm-landing-prices > .dm-tariff-note { margin-top: 1.65rem; }
+.dm-tariff-free {
+  max-width: 44rem;
+  margin-top: 1.25rem;
+  padding: .85rem 1rem;
+  border-left: 3px solid #507765;
+  background: #eef3ec;
+  color: #263b33;
+}
+.dm-tariff-free p { margin-top: .3rem; font-size: .875rem; }
 .dm-landing-disclosure { border-bottom: 1px solid var(--landing-line); }
 .dm-landing-disclosure summary { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-block: 1rem; min-height: 44px; cursor: pointer; list-style: none; }
 .dm-landing-disclosure summary::-webkit-details-marker { display: none; }
@@ -186,13 +181,9 @@
   .dm-landing-nav { column-gap: .75rem; }
   .dm-landing-nav a[href^='#'],
   .dm-landing-hero .dm-landing-kicker,
-  .dm-landing-motives,
-  .dm-landing-start p,
   .dm-landing-intro,
   .dm-tariff-instructions,
-  .dm-tariff-choices,
-  .dm-tariff-savings,
-  .dm-tariff-track,
+  .dm-tariff-grid,
   .dm-tariff-disclaimer,
   .dm-landing-close h2 { display: none; }
 
@@ -205,23 +196,57 @@
   .dm-landing-mobile-intro { color: #edf2fa; max-width: 36ch; margin-top: 1rem; }
   .dm-landing-start { margin-top: 1.35rem; }
 
-  .dm-tariff-grid, .dm-landing-faq, .dm-landing-steps ol { grid-template-columns: minmax(0, 1fr); }
-  .dm-tariff-grid { gap: 1rem; margin-top: 1rem; }
-  .dm-tariff-select { display: grid; gap: .375rem; color: var(--landing-soft); font-size: .875rem; }
-  .dm-tariff-select select {
-    width: 100%;
-    min-height: 48px;
-    padding: .55rem .75rem;
-    border: 1px solid #8b95a5;
-    border-radius: .5rem;
-    background: white;
-    color: var(--landing-ink);
-    font-family: inherit;
-    font-size: 1rem;
+  .dm-landing-faq, .dm-landing-steps ol { grid-template-columns: minmax(0, 1fr); }
+  .dm-tariff-accordion {
+    display: block;
+    margin-top: 1rem;
+    border: 1px solid var(--landing-line);
+    border-radius: 1rem;
+    background: #fffefa;
   }
-  .dm-tariff-bars { gap: 0; margin-block: .5rem .75rem; }
-  .dm-tariff-bar { align-items: center; min-height: 44px; padding-block: .4rem; border-bottom: 1px solid var(--landing-line); }
-  .dm-tariff-bar dd { font-size: 1rem; }
+  .dm-tariff-item + .dm-tariff-item { border-top: 1px solid var(--landing-line); }
+  .dm-tariff-accordion h3 { font-size: 1rem; line-height: 1.35; letter-spacing: normal; }
+  .dm-tariff-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+    width: 100%;
+    min-height: 49px;
+    padding: .65rem .9rem;
+    border: 0;
+    background: transparent;
+    color: var(--landing-ink);
+    text-align: left;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .dm-tariff-trigger[aria-expanded="true"] { color: #193a9d; }
+  .dm-tariff-trigger span { color: var(--landing-blue); font-size: 1.2rem; line-height: 1; }
+  .dm-tariff-trigger:focus-visible { outline-offset: -3px; }
+  .dm-tariff-panel { padding: 0 .9rem .9rem; }
+  .dm-tariff-detail { font-size: .875rem; }
+  .dm-tariff-bars {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .5rem;
+    margin-block: .65rem .75rem;
+  }
+  .dm-tariff-bar {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: .5rem;
+    min-width: 0;
+    padding: .75rem .6rem;
+    border-radius: .65rem;
+    background: #eef0f3;
+  }
+  .dm-tariff-bar-university { background: #e9f0ff; }
+  .dm-tariff-bar dt { font-size: .8125rem; line-height: 1.3; }
+  .dm-tariff-bar dd { font-size: clamp(1.125rem, 5vw, 1.45rem); line-height: 1.15; }
+  .dm-tariff-bar-university dd { color: #193a9d; }
   .dm-landing-prices > .dm-tariff-note { margin-top: 1rem; }
 
   .dm-landing .dm-landing-steps-heading {
