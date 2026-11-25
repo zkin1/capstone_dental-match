@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './hooks/useAuth';
 import { useAuth } from './hooks/authContext';
 import { ToastProvider } from './components/Toast';
@@ -13,6 +13,7 @@ import Assignments from './pages/Assignments';
 import MisAsignaciones from './pages/MisAsignaciones';
 import Availability from './pages/Availability';
 import Landing from './pages/Landing';
+import Terms from './pages/Terms';
 import RegistroPaciente from './pages/RegistroPaciente';
 import RegistroEstudiante from './pages/RegistroEstudiante';
 import Notifications from './pages/Notifications';
@@ -27,13 +28,14 @@ function homeFor(role) {
 
 function ProtectedRoute({ children }) {
   const { isLoggedIn, loading } = useAuth();
+  const { pathname } = useLocation();
   if (loading)
     return (
       <div className="loading" role="status">
         Cargando…
       </div>
     );
-  if (!isLoggedIn) return <Navigate to="/login" />;
+  if (!isLoggedIn) return <Navigate to={pathname === '/' ? '/landing' : '/login'} replace />;
   return children;
 }
 
@@ -59,6 +61,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/landing" element={<Landing />} />
+      <Route path="/terminos-y-condiciones" element={<Terms />} />
       <Route path="/registro-paciente" element={<RegistroPaciente />} />
       <Route path="/registro-estudiante" element={<RegistroEstudiante />} />
       <Route

@@ -1,0 +1,254 @@
+.dm-landing {
+  --landing-bg: #faf9f5;
+  --landing-cream: #f4eddf;
+  --landing-ink: #0c162a;
+  --landing-soft: #535d6f;
+  --landing-line: #dcdfe6;
+  --landing-blue: #2554d8;
+  --landing-space: clamp(3.5rem, 8vw, 7rem);
+  min-height: 100vh;
+  background: var(--landing-bg);
+  color: var(--landing-ink);
+}
+
+.dm-landing-wrap { width: min(100% - 3rem, 68rem); margin-inline: auto; }
+.dm-landing h1, .dm-landing h2, .dm-landing h3 {
+  color: inherit;
+  font-family: inherit;
+  font-weight: 500;
+  line-height: 1.04;
+  letter-spacing: -.065em;
+}
+.dm-landing h2 { font-size: clamp(2rem, 4.4vw, 3.25rem); text-wrap: pretty; }
+.dm-landing h3 { font-size: 1.55rem; line-height: 1.2; letter-spacing: -.035em; }
+.dm-landing a { color: inherit; }
+.dm-landing .skip-link { color: white; }
+.dm-landing :focus-visible { outline: 2px solid var(--landing-blue); outline-offset: 4px; }
+.dm-landing-kicker { color: var(--landing-blue); font-size: .875rem; }
+.dm-landing-muted { color: var(--landing-soft); }
+.dm-landing-mobile-only, .dm-tariff-select { display: none; }
+
+.dm-landing-nav, .dm-landing-footer > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  column-gap: 1.5rem;
+  row-gap: .5rem;
+  padding-block: 1rem;
+}
+.dm-landing-nav nav, .dm-landing-footer nav { display: flex; flex-wrap: wrap; gap: .125rem 1.5rem; }
+.dm-landing-nav nav a, .dm-landing-footer nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: .875rem;
+}
+.dm-landing-nav a { text-decoration: none; }
+.dm-landing-nav nav a { color: #edf2fa; }
+.dm-landing-nav nav a:hover { text-decoration: underline; }
+.dm-landing-brand { display: inline-flex; align-items: center; gap: .6rem; font-weight: 700; min-height: 44px; }
+.dm-landing-mark {
+  display: grid;
+  place-items: center;
+  inline-size: 2rem;
+  block-size: 2rem;
+  background: var(--landing-ink);
+  color: var(--landing-bg);
+  border-radius: .65rem;
+}
+
+.dm-landing-cover {
+  position: relative;
+  isolation: isolate;
+  background: var(--landing-ink);
+  color: white;
+}
+.dm-landing-cover-image, .dm-landing-cover::after {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.dm-landing-cover-image { object-fit: cover; object-position: center; z-index: -2; }
+.dm-landing-cover::after {
+  content: '';
+  z-index: -1;
+  background:
+    linear-gradient(180deg, rgb(8 18 36 / 78%), transparent 24%, rgb(8 18 36 / 35%)),
+    linear-gradient(90deg, rgb(8 18 36 / 96%), rgb(8 18 36 / 80%) 48%, rgb(8 18 36 / 24%) 78%, rgb(8 18 36 / 10%));
+}
+.dm-landing-cover :focus-visible { outline-color: white; }
+.dm-landing-cover .dm-landing-mark { border: 1px solid rgb(255 255 255 / 45%); background: rgb(12 22 42 / 55%); }
+.dm-landing-cover .dm-landing-kicker { color: #dbeafe; }
+.dm-landing-hero { padding-block: var(--landing-space); }
+.dm-landing-hero h1 { font-size: clamp(3rem, 7.5vw, 6.8rem); line-height: .97; max-width: 44rem; margin-top: 1.5rem; }
+.dm-landing-hero h1 span { color: #dce6f1; }
+.dm-landing-motives { display: flex; flex-wrap: wrap; gap: .5rem; max-width: 43rem; margin-top: clamp(2rem, 4.5vw, 3.5rem); border: 0; min-inline-size: 0; }
+.dm-landing-motives button {
+  min-height: 44px;
+  padding: .55rem 1.1rem;
+  border: 1px solid rgb(255 255 255 / 58%);
+  border-radius: 999px;
+  background: rgb(12 22 42 / 52%);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.dm-landing-motives button:hover { border-color: white; }
+.dm-landing-motives button[aria-pressed="true"] { border-color: white; background: white; color: var(--landing-ink); font-weight: 700; }
+.dm-landing-start { display: flex; align-items: center; flex-wrap: wrap; gap: .8rem 1.5rem; margin-top: 2rem; }
+.dm-landing-start p { color: #edf2fa; font-size: .875rem; }
+.dm-landing .dm-landing-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .55rem;
+  min-height: 52px;
+  padding: .7rem 1.55rem;
+  background: var(--landing-ink);
+  color: white;
+  border-radius: 999px;
+  text-decoration: none;
+  font-weight: 600;
+}
+.dm-landing .dm-landing-button:hover { background: #18345e; }
+
+.dm-landing-intro { background: var(--landing-cream); }
+.dm-landing-intro-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(1.5rem, 5vw, 4rem); align-items: center; padding-block: var(--landing-space); }
+.dm-landing-intro p { color: var(--landing-soft); font-size: 1.075rem; max-width: 45ch; }
+
+.dm-landing-prices, .dm-landing-faq { padding-block: var(--landing-space); }
+.dm-landing-prices h2 { margin-bottom: .85rem; }
+.dm-tariff-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: clamp(1.75rem, 5vw, 4rem); margin-top: clamp(1.5rem, 4vw, 3.5rem); }
+.dm-tariff-choices { border: 0; min-inline-size: 0; }
+.dm-tariff-option { display: flex; align-items: center; min-height: 56px; position: relative; padding: .7rem .75rem .7rem 1.6rem; border-bottom: 1px solid var(--landing-line); color: var(--landing-soft); cursor: pointer; }
+.dm-tariff-option:hover { background: var(--landing-cream); }
+.dm-tariff-option:has(:focus-visible) { outline: 2px solid var(--landing-blue); outline-offset: -2px; }
+.dm-tariff-option:has(:checked) { color: var(--landing-ink); font-weight: 700; }
+.dm-tariff-option:has(:checked)::before { content: ''; position: absolute; left: .6rem; width: .4rem; height: .4rem; border-radius: 50%; background: var(--landing-blue); }
+.dm-tariff-detail { font-size: .95rem; color: var(--landing-soft); }
+.dm-tariff-percent { color: var(--landing-ink); font-size: clamp(4.5rem, 8vw, 6rem); line-height: .98; font-weight: 500; letter-spacing: -.075em; margin-block: .65rem; font-variant-numeric: tabular-nums; }
+.dm-tariff-percent span { color: var(--landing-blue); }
+.dm-tariff-bars { display: grid; gap: 1.3rem; margin-block: 1.75rem .9rem; }
+.dm-tariff-bar { display: grid; grid-template-columns: 1fr auto; gap: .45rem .75rem; font-size: .875rem; align-items: end; }
+.dm-tariff-bar dd { font-weight: 700; font-variant-numeric: tabular-nums; }
+.dm-tariff-track { grid-column: 1 / -1; height: .5rem; overflow: hidden; border-radius: 999px; background: #ede9e1; }
+.dm-tariff-fill { display: block; height: 100%; border-radius: inherit; background: #929cac; transition: width .25s ease; }
+.dm-tariff-fill.university { background: var(--landing-blue); }
+.dm-tariff-note { font-size: .8125rem; color: var(--landing-soft); max-width: 78ch; }
+.dm-landing-prices > .dm-tariff-note { margin-top: 1.65rem; }
+.dm-landing-disclosure { border-bottom: 1px solid var(--landing-line); }
+.dm-landing-disclosure summary { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-block: 1rem; min-height: 44px; cursor: pointer; list-style: none; }
+.dm-landing-disclosure summary::-webkit-details-marker { display: none; }
+.dm-landing-disclosure summary::after { content: '+' / ''; color: var(--landing-blue); }
+.dm-landing-disclosure[open] summary::after { content: '−' / ''; }
+.dm-landing-disclosure p { color: var(--landing-soft); padding-bottom: 1rem; }
+.dm-tariff-sources { max-width: 38rem; }
+.dm-tariff-sources summary { justify-content: start; font-size: .875rem; color: var(--landing-blue); }
+.dm-tariff-sources ul { color: var(--landing-soft); font-size: .875rem; padding: 0 0 1rem 1.25rem; }
+.dm-tariff-sources li + li { margin-top: .4rem; }
+
+.dm-landing-steps { border-block: 1px solid var(--landing-line); }
+.dm-landing-steps ol { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); list-style: none; }
+.dm-landing-steps li { min-width: 0; padding: clamp(1.5rem, 4vw, 3rem); }
+.dm-landing-steps li:first-child { padding-left: 0; }
+.dm-landing-steps li:last-child { padding-right: 0; }
+.dm-landing-steps li + li { border-left: 1px solid var(--landing-line); }
+.dm-landing-steps li span { color: var(--landing-soft); font-size: .875rem; }
+.dm-landing-steps h3 { margin-block: 1.5rem .8rem; }
+.dm-landing-steps li p { color: var(--landing-soft); }
+.dm-landing-reassurance { border-top: 1px solid var(--landing-line); padding-block: 1.15rem; color: var(--landing-soft); }
+.dm-landing-reassurance strong { color: var(--landing-ink); }
+.dm-landing-faq { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr); gap: clamp(1rem, 5vw, 4rem); }
+.dm-landing-faq h2 { font-size: clamp(2rem, 3.3vw, 2.6rem); }
+
+.dm-landing-close, .dm-landing-footer { background: var(--landing-ink); color: var(--landing-bg); }
+.dm-landing-close > div { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 1.5rem; padding-block: var(--landing-space); }
+.dm-landing-close h2 { max-width: 19ch; font-size: clamp(2.35rem, 5.25vw, 3.9rem); }
+.dm-landing-cover .dm-landing-button, .dm-landing-close .dm-landing-button { background: var(--landing-blue); }
+.dm-landing-cover .dm-landing-button:hover, .dm-landing-close .dm-landing-button:hover { background: #1d44b2; }
+.dm-landing-close :focus-visible, .dm-landing-footer :focus-visible { outline-color: white; }
+.dm-landing-footer { border-top: 1px solid rgb(255 255 255 / 20%); }
+.dm-landing-footer a { text-underline-offset: .25em; }
+
+.dm-landing-terms { max-width: 46rem; padding-block: 2rem var(--landing-space); }
+.dm-landing-terms h1 { font-size: clamp(2.75rem, 7vw, 4.75rem); margin-block: 2.5rem 1.5rem; }
+.dm-landing-terms section { margin-top: 1.75rem; }
+.dm-landing-terms h2 { font-size: 1.5rem; letter-spacing: -.04em; margin-bottom: .65rem; }
+.dm-landing-terms p { color: var(--landing-soft); }
+
+@media (max-width: 720px) {
+  .dm-landing { --landing-space: 2.5rem; }
+  .dm-landing-wrap { width: calc(100% - 2rem); }
+  .dm-landing-mobile-only { display: block; }
+
+  .dm-landing-nav { column-gap: .75rem; }
+  .dm-landing-nav a[href^='#'],
+  .dm-landing-hero .dm-landing-kicker,
+  .dm-landing-motives,
+  .dm-landing-start p,
+  .dm-landing-intro,
+  .dm-tariff-instructions,
+  .dm-tariff-choices,
+  .dm-tariff-savings,
+  .dm-tariff-track,
+  .dm-tariff-disclaimer,
+  .dm-landing-close h2 { display: none; }
+
+  .dm-landing-cover-image { object-position: 73% center; }
+  .dm-landing-cover::after {
+    background: linear-gradient(180deg, rgb(8 18 36 / 88%), rgb(8 18 36 / 71%) 34%, rgb(8 18 36 / 60%) 63%, rgb(8 18 36 / 92%));
+  }
+  .dm-landing-hero { padding-block: 3rem 3.5rem; }
+  .dm-landing-hero h1 { margin-top: 0; font-size: clamp(2.75rem, 9vw, 4.25rem); }
+  .dm-landing-mobile-intro { color: #edf2fa; max-width: 36ch; margin-top: 1rem; }
+  .dm-landing-start { margin-top: 1.35rem; }
+
+  .dm-tariff-grid, .dm-landing-faq, .dm-landing-steps ol { grid-template-columns: minmax(0, 1fr); }
+  .dm-tariff-grid { gap: 1rem; margin-top: 1rem; }
+  .dm-tariff-select { display: grid; gap: .375rem; color: var(--landing-soft); font-size: .875rem; }
+  .dm-tariff-select select {
+    width: 100%;
+    min-height: 48px;
+    padding: .55rem .75rem;
+    border: 1px solid #8b95a5;
+    border-radius: .5rem;
+    background: white;
+    color: var(--landing-ink);
+    font-family: inherit;
+    font-size: 1rem;
+  }
+  .dm-tariff-bars { gap: 0; margin-block: .5rem .75rem; }
+  .dm-tariff-bar { align-items: center; min-height: 44px; padding-block: .4rem; border-bottom: 1px solid var(--landing-line); }
+  .dm-tariff-bar dd { font-size: 1rem; }
+  .dm-landing-prices > .dm-tariff-note { margin-top: 1rem; }
+
+  .dm-landing .dm-landing-steps-heading {
+    position: static;
+    width: calc(100% - 2rem);
+    height: auto;
+    margin: 0 auto;
+    padding-top: 2rem;
+    overflow: visible;
+    clip: auto;
+    white-space: normal;
+  }
+  .dm-landing-steps li {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    column-gap: .75rem;
+    row-gap: .35rem;
+    padding: 1rem 0;
+  }
+  .dm-landing-steps li + li { border-left: 0; border-top: 1px solid var(--landing-line); }
+  .dm-landing-steps li span { padding-top: .15rem; }
+  .dm-landing-steps li p { grid-column: 2; }
+  .dm-landing-steps h3 { margin: 0; font-size: 1.2rem; }
+  .dm-landing-close > div { padding-block: 1.5rem; }
+  .dm-landing-footer nav { gap: 0 1rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dm-tariff-fill { transition: none; }
+}

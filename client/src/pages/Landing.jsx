@@ -1,132 +1,145 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { usePageTitle } from '../hooks/usePageTitle';
+import DentalPriceCompare from '../components/DentalPriceCompare';
 import Icon from '../components/Icon';
+import { usePageTitle } from '../hooks/usePageTitle';
+import './Landing.css';
+
+const motivos = [
+  'Me duele una muela',
+  'Necesito una limpieza',
+  'Tengo una tapadura rota',
+  'Me sangran las encías',
+  'Quiero una revisión',
+  'Me falta una pieza',
+];
+
+const preguntas = [
+  ['¿Quién me atiende?', 'La atención la realizan estudiantes de odontología en formación clínica, bajo la supervisión de docentes.'],
+  ['¿El agente me dice qué tratamiento necesito?', 'Si está disponible, el agente revisa tus respuestas para orientar tu caso. Esa primera clasificación no es un diagnóstico. El equipo odontológico te evalúa y conversa contigo sobre el tratamiento que necesitas.'],
+  ['¿Por qué cambian los precios?', 'Cada clínica tiene sus propios aranceles. El costo final depende de lo que se acuerde después de tu evaluación.'],
+  ['¿Qué pasa después de contar mi caso?', 'El sistema busca un estudiante según la categoría del caso, los horarios y la disponibilidad. Si hace falta revisar algo o no hay un cupo disponible, tu solicitud queda pendiente.'],
+];
 
 export default function Landing() {
   usePageTitle('Bienvenido');
+  const [seleccion, setSeleccion] = useState([]);
+  const registroState = { quejaInicial: seleccion.join('. ') };
+
+  function toggleMotivo(motivo) {
+    setSeleccion(actual => actual.includes(motivo)
+      ? actual.filter(item => item !== motivo)
+      : [...actual, motivo]);
+  }
 
   return (
-    <div className="landing-page landing-v2">
-      <header className="landing-hero">
-        <img
-          className="landing-hero-image"
-          src="/images/dental-matching-hero.png"
-          alt="Estudiante de odontología conversando con una paciente antes de una atención"
-        />
-        <div className="landing-hero-tint" aria-hidden="true" />
-        <nav className="landing-nav" aria-label="Navegación pública">
-          <Link to="/landing" className="landing-brand" aria-label="Dental Match, inicio">
-            <span className="landing-brand-mark"><Icon name="tooth" size={21} /></span>
-            <span className="landing-brand-label">Dental Match</span>
-          </Link>
-          <div className="landing-nav-actions">
-            <Link to="/login" className="landing-nav-button landing-nav-login" aria-label="Ya tengo una cuenta">
-              <span className="landing-nav-login-label">Ya tengo una cuenta</span>
-              <Icon name="user" size={20} className="landing-nav-login-icon" />
+    <div className="dm-landing">
+      <a className="skip-link" href="#landing-heading">Ir al contenido</a>
+      <main>
+        <div className="dm-landing-cover">
+          <img
+            className="dm-landing-cover-image"
+            src="/images/dental-matching-hero.png"
+            width="1536"
+            height="1024"
+            alt=""
+            fetchPriority="high"
+          />
+          <header className="dm-landing-wrap dm-landing-nav">
+            <Link to="/landing" className="dm-landing-brand">
+              <span className="dm-landing-mark"><Icon name="tooth" size={17} /></span>
+              Dental Match
             </Link>
-            <Link to="/registro-paciente" className="landing-nav-button landing-nav-cta">
-              Contar mi caso
-              <Icon name="arrow-left" size={15} style={{ transform: 'rotate(180deg)' }} />
-            </Link>
-          </div>
-        </nav>
+            <nav aria-label="Navegación pública">
+              <a href="#precios">Precios</a>
+              <a href="#como">Cómo funciona</a>
+              <Link to="/login">Ya tengo cuenta</Link>
+            </nav>
+          </header>
 
-        <div className="landing-hero-content">
-          <div className="landing-copy">
-            <h1>Encuentra la atención dental que necesitas.</h1>
-            <p className="landing-tagline">
-              Un espacio para que pacientes reciban atención supervisada y estudiantes sigan desarrollando su experiencia clínica.
-            </p>
-            <div className="landing-cta">
-              <Link to="/registro-paciente" className="btn btn-primary btn-cta">
-                Contar mi caso <Icon name="arrow-left" size={17} style={{ transform: 'rotate(180deg)' }} />
-              </Link>
-              <Link to="/registro-estudiante" className="landing-secondary-cta">
-                Soy estudiante de odontología <Icon name="arrow-left" size={16} style={{ transform: 'rotate(180deg)' }} />
-              </Link>
+          <section className="dm-landing-wrap dm-landing-hero" aria-labelledby="landing-heading">
+            <p className="dm-landing-kicker">Atención dental supervisada en clínicas universitarias</p>
+            <h1 id="landing-heading" tabIndex={-1}>Hola. <span>¿Qué te</span> está pasando?</h1>
+            <p className="dm-landing-mobile-only dm-landing-mobile-intro">Buscamos una opción de atención con estudiantes de odontología bajo supervisión clínica.</p>
+            <fieldset className="dm-landing-motives">
+              <legend className="visually-hidden">¿Qué te está pasando?</legend>
+              {motivos.map(motivo => (
+                <button
+                  type="button"
+                  key={motivo}
+                  aria-pressed={seleccion.includes(motivo)}
+                  onClick={() => toggleMotivo(motivo)}
+                >
+                  {motivo}
+                </button>
+              ))}
+            </fieldset>
+            <div className="dm-landing-start">
+              <Link to="/registro-paciente" state={registroState} className="dm-landing-button">Contar mi caso <span aria-hidden="true">→</span></Link>
+              <p>Si quieres, elige uno o más motivos antes de continuar.</p>
             </div>
-          </div>
+          </section>
         </div>
 
-        <div className="landing-hero-scroll" aria-hidden="true"><span /> Desliza para conocer el recorrido</div>
-      </header>
-
-      <main>
-        <section className="landing-intro" aria-labelledby="intro-title">
-          <div className="landing-intro-copy">
-            <p className="section-marker">Para pacientes y estudiantes</p>
-            <h2 id="intro-title">Ordenamos la información para que la atención sea más fácil.</h2>
-            <p>Nos cuentas lo que necesitas, revisamos tu información y buscamos una alternativa de atención que tenga sentido para tu caso.</p>
+        <section className="dm-landing-intro" aria-labelledby="landing-intro-heading">
+          <div className="dm-landing-wrap dm-landing-intro-grid">
+            <h2 id="landing-intro-heading">Te conectamos con estudiantes de odontología que necesitan pacientes para su formación.</h2>
+            <p>Cuéntanos qué te pasa y buscaremos una alternativa de atención para tu caso. Los estudiantes atienden con supervisión clínica.</p>
           </div>
-          <figure className="landing-detail-image">
-            <img src="/images/dental-matching-detail.png" alt="Manos de un estudiante revisando un caso junto a un espejo dental" loading="lazy" />
-            <figcaption>Preparar mejor cada encuentro también es parte de cuidar.</figcaption>
-          </figure>
         </section>
 
-  <section className="landing-process" aria-labelledby="process-title">
-    <div className="landing-section-heading">
-      <p className="section-marker">Así funciona</p>
-      <h2 id="process-title">Te acompañamos paso a paso.</h2>
-    </div>
+        <DentalPriceCompare />
 
-    <div className="process-layout">
-      <div className="process-list">
-        <article className="process-item">
-          <span className="process-number">01</span>
+        <section id="como" className="dm-landing-steps" aria-labelledby="landing-steps-heading">
+          <h2 className="visually-hidden dm-landing-steps-heading" id="landing-steps-heading">Cómo funciona</h2>
+          <ol className="dm-landing-wrap">
+            <li>
+              <span aria-hidden="true">01</span>
+              <h3>Cuéntanos qué te pasa</h3>
+              <p>Responde unas preguntas sobre tus molestias y déjanos tus datos de contacto.</p>
+            </li>
+            <li>
+              <span aria-hidden="true">02</span>
+              <h3>Orientamos tu caso</h3>
+              <p>Si está disponible, un agente de IA revisa tus respuestas y sugiere una precategorización para orientar tu caso.</p>
+            </li>
+            <li>
+              <span aria-hidden="true">03</span>
+              <h3>Buscamos quién puede atenderte</h3>
+              <p>El sistema puede asignarte a un estudiante según la especialidad, los horarios y la disponibilidad. Algunos casos requieren revisión del equipo.</p>
+            </li>
+          </ol>
+          <p className="dm-landing-wrap dm-landing-reassurance"><strong>Tu tratamiento se define en la consulta.</strong> La categoría inicial es una orientación para organizar tu caso. El equipo odontológico te evalúa y te explica tus opciones.</p>
+        </section>
+
+        <section className="dm-landing-wrap dm-landing-faq" aria-labelledby="landing-faq-heading">
+          <h2 id="landing-faq-heading">Preguntas que te puedes estar haciendo</h2>
           <div>
-            <h3>Cuéntanos qué te pasa</h3>
-            <p>Te hacemos algunas preguntas sobre tus molestias y tus datos de contacto para entender mejor tu situación.</p>
+            {preguntas.map(([pregunta, respuesta], index) => (
+              <details className="dm-landing-disclosure" key={pregunta} open={index === 0}>
+                <summary>{pregunta}</summary>
+                <p>{respuesta}</p>
+              </details>
+            ))}
           </div>
-        </article>
+        </section>
 
-        <article className="process-item">
-          <span className="process-number">02</span>
-          <div>
-            <h3>Vemos qué tipo de atención necesitas</h3>
-            <p>Revisamos tus respuestas para entender mejor qué atención puede ayudarte.</p>
+        <section className="dm-landing-close">
+          <div className="dm-landing-wrap">
+            <h2>Cuéntanos qué te pasa.<br /> Nosotros buscamos el siguiente paso.</h2>
+            <Link to="/registro-paciente" state={registroState} className="dm-landing-button">Contar mi caso <span aria-hidden="true">→</span></Link>
           </div>
-        </article>
-
-        <article className="process-item">
-          <span className="process-number">03</span>
-          <div>
-            <h3>Buscamos una buena alternativa</h3>
-            <p>Consideramos la especialidad, los horarios y la disponibilidad para buscar un estudiante que pueda atenderte con supervisión clínica.</p>
-          </div>
-        </article>
-      </div>
-
-      <figure className="process-visual">
-        <img
-          src="/images/acompanamiento-paso-a-paso.png.png"
-          alt="Un estudiante de odontología y una paciente revisan juntos un plan de atención."
-          loading="lazy"
-        />
-        <figcaption>Te orientamos durante cada etapa.</figcaption>
-      </figure>
-    </div>
-  </section>
-
-        <section className="landing-roles" aria-label="Elige cómo participar">
-          <article className="role-panel role-panel-patient">
-            <div className="role-panel-top"><Icon name="user-injured" size={24} /><span>Para pacientes</span></div>
-            <h2>Cuéntanos qué te pasa.</h2>
-            <p>Completa unas preguntas sobre tu situación y te ayudaremos a encontrar el siguiente paso.</p>
-            <Link to="/registro-paciente" className="role-panel-link">Contar mi caso <Icon name="arrow-left" size={17} style={{ transform: 'rotate(180deg)' }} /></Link>
-          </article>
-          <article className="role-panel role-panel-student">
-            <div className="role-panel-top"><Icon name="grad-cap" size={24} /><span>Para estudiantes</span></div>
-            <h2>Encuentra casos para seguir aprendiendo.</h2>
-            <p>Comparte las áreas que puedes atender y tus horarios disponibles para recibir casos acordes a tu formación.</p>
-            <Link to="/registro-estudiante" className="role-panel-link">Crear perfil <Icon name="arrow-left" size={17} style={{ transform: 'rotate(180deg)' }} /></Link>
-          </article>
         </section>
       </main>
 
-      <footer className="landing-footer landing-footer-v2">
-        <div className="landing-footer-brand"><span className="landing-brand-mark"><Icon name="tooth" size={19} /></span> Dental Match</div>
-        <p>¿Ya tienes cuenta? <Link to="/login">Inicia sesión aquí</Link></p>
+      <footer className="dm-landing-footer">
+        <div className="dm-landing-wrap">
+          <strong>Dental Match</strong>
+          <nav aria-label="Enlaces al pie de la página">
+            <Link to="/registro-estudiante">Soy estudiante</Link>
+            <Link to="/terminos-y-condiciones">Términos y condiciones</Link>
+          </nav>
+        </div>
       </footer>
     </div>
   );

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { TRIAJE_FEATURES, TRIAJE_SECTIONS, buildRespuestasIniciales } from '../data/triajeFeatures';
@@ -38,8 +38,10 @@ function esVisible(feature, respuestas) {
 
 export default function RegistroPaciente() {
   usePageTitle('Cuéntanos tu caso');
+  const { state } = useLocation();
+  useEffect(() => { window.scrollTo(0, 0); }, []);
   const [datos, setDatos] = useState({ nombre_completo: '', edad: '', telefono: '', email: '', ciudad: '' });
-  const [queja, setQueja] = useState('');
+  const [queja, setQueja] = useState(() => typeof state?.quejaInicial === 'string' ? state.quejaInicial : '');
   const [respuestas, setRespuestas] = useState(buildRespuestasIniciales);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -119,6 +121,7 @@ export default function RegistroPaciente() {
             <div className="confirmation-icon"><Icon name="check-circle" size={56} /></div>
             <h2>¡Registro exitoso!</h2>
             <p className="confirmation-case">Tu número de caso: <strong>{resultado.numeroCaso}</strong></p>
+            <p className="muted">La categoría inicial orienta tu caso. El equipo odontológico te evaluará y te explicará las opciones de tratamiento.</p>
             {resultado.alertaClinica && <div className="alert" role="alert"><Icon name="warning" size={18} />{resultado.alertaClinica}</div>}
             {resultado.estudianteAsignado ? (
               <div className="confirmation-assignment">
@@ -197,7 +200,7 @@ export default function RegistroPaciente() {
 
           <label className="consent-row">
             <input type="checkbox" checked={consentimiento} onChange={e => setConsentimiento(e.target.checked)} required />
-            <span>Acepto que usemos mis datos para gestionar mi caso y contactarme. Entiendo que esta orientación no reemplaza un diagnóstico odontológico.</span>
+            <span>Acepto que usemos mis datos para gestionar mi caso y contactarme. Entiendo que el agente de IA puede revisar mis respuestas, incluido lo que escribo sobre mis molestias, para orientar mi caso.</span>
           </label>
 
           <Button type="submit" loading={loading} icon="send" className="btn-block">
