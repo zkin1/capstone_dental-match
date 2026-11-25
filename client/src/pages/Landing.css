@@ -100,10 +100,6 @@
 }
 .dm-landing .dm-landing-button:hover { background: #18345e; }
 
-.dm-landing-intro { background: var(--landing-cream); }
-.dm-landing-intro-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(1.5rem, 5vw, 4rem); align-items: center; padding-block: var(--landing-space); }
-.dm-landing-intro p { color: var(--landing-soft); font-size: 1.075rem; max-width: 45ch; }
-
 .dm-landing-prices, .dm-landing-faq { padding-block: var(--landing-space); }
 .dm-landing-prices h2 { margin-bottom: .85rem; }
 .dm-tariff-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: clamp(1.75rem, 5vw, 4rem); margin-top: clamp(1.5rem, 4vw, 3.5rem); }
@@ -183,9 +179,10 @@
   .dm-landing-cover::after {
     background:
       linear-gradient(180deg, rgb(8 18 36 / 80%), rgb(8 18 36 / 50%) 3.75rem, transparent 7.5rem),
+      linear-gradient(0deg, rgb(8 18 36 / 91%), rgb(8 18 36 / 54%) 26%, transparent 56%),
       linear-gradient(90deg, rgb(8 18 36 / 66%), rgb(8 18 36 / 48%) 45%, rgb(8 18 36 / 12%) 72%, transparent);
   }
-  .dm-landing-hero { padding-block: clamp(2.25rem, min(5vw, 7vh), 4.25rem); }
+  .dm-landing-hero { padding-block: clamp(2.25rem, min(5vw, 6vh), 3.75rem) clamp(1.5rem, 3vw, 2.5rem); }
   .dm-landing-hero h1 {
     max-width: min(39rem, 62%);
     margin-top: .9rem;
@@ -194,8 +191,16 @@
     text-wrap: balance;
   }
   .dm-landing-start { margin-top: 1.5rem; }
-  .dm-landing-intro-grid { padding-block: clamp(2.5rem, 4.5vw, 4rem); }
-  .dm-landing-intro h2 { font-size: clamp(2rem, 3.4vw, 2.75rem); }
+  .dm-landing-intro-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr);
+    align-items: center;
+    gap: clamp(1rem, 3vw, 2.5rem);
+    padding-block: clamp(1rem, 2.5vh, 1.6rem) clamp(1.75rem, 4.5vh, 3.25rem);
+    padding-inline-end: clamp(0rem, 19vw, 21rem);
+  }
+  .dm-landing-intro h2 { font-size: clamp(1.4rem, 2.3vw, 2.35rem); max-width: 29ch; }
+  .dm-landing-intro p { color: #e5edf7; font-size: clamp(.9375rem, 1.3vw, 1.075rem); max-width: 43ch; }
 }
 
 @media (max-width: 720px) {

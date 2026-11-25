@@ -17,7 +17,7 @@ export default function Landing() {
     <div className="dm-landing">
       <a className="skip-link" href="#landing-heading">Ir al contenido</a>
       <main>
-        <div className="dm-landing-cover">
+        <section className="dm-landing-cover" aria-labelledby="landing-heading">
           <picture>
             <source media="(min-width: 721px)" srcSet="/images/dental-matching-hero-wide.webp" type="image/webp" />
             <img
@@ -41,20 +41,20 @@ export default function Landing() {
             </nav>
           </header>
 
-          <section className="dm-landing-wrap dm-landing-hero" aria-labelledby="landing-heading">
+          <div className="dm-landing-wrap dm-landing-hero">
             <p className="dm-landing-kicker">Atención dental supervisada en clínicas universitarias</p>
             <h1 id="landing-heading" tabIndex={-1}>Hola. <span>¿Qué te</span> está pasando?</h1>
             <p className="dm-landing-mobile-only dm-landing-mobile-intro">Buscamos una opción de atención con estudiantes de odontología bajo supervisión clínica.</p>
             <div className="dm-landing-start">
               <Link to="/registro-paciente" className="dm-landing-button">Contar mi caso <span aria-hidden="true">→</span></Link>
             </div>
-          </section>
-        </div>
+          </div>
 
-        <section className="dm-landing-intro" aria-labelledby="landing-intro-heading">
-          <div className="dm-landing-wrap dm-landing-intro-grid">
-            <h2 id="landing-intro-heading">Te conectamos con estudiantes de odontología que necesitan pacientes para su formación.</h2>
-            <p>Cuéntanos qué te pasa y buscaremos una alternativa de atención para tu caso. Los estudiantes atienden con supervisión clínica.</p>
+          <div className="dm-landing-intro">
+            <div className="dm-landing-wrap dm-landing-intro-grid">
+              <h2>Te conectamos con estudiantes de odontología que necesitan pacientes para su formación.</h2>
+              <p>Cuéntanos qué te pasa y buscaremos una alternativa de atención para tu caso. Los estudiantes atienden con supervisión clínica.</p>
+            </div>
           </div>
         </section>
 
