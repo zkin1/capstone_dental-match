@@ -175,23 +175,15 @@
 .dm-landing-terms p { color: var(--landing-soft); }
 
 @media (min-width: 721px) {
-  .dm-landing-cover-image {
-    inset: 50% max(0px, calc((100% - 92rem) / 2)) auto auto;
-    width: auto;
-    max-width: 65%;
-    height: 100%;
-    object-fit: contain;
-    object-position: right center;
-    transform: translateY(-50%);
-    mask-image:
-      linear-gradient(90deg, transparent, black 25%, black 87%, transparent),
-      linear-gradient(180deg, transparent, black 12%, black 85%, transparent);
-    mask-composite: intersect;
+  .dm-landing-cover .dm-landing-wrap,
+  .dm-landing-intro-grid {
+    width: min(100% - clamp(3rem, 11vw, 10rem), 90rem);
   }
+  .dm-landing-cover-image { object-position: 75% 44%; }
   .dm-landing-cover::after {
     background:
       linear-gradient(180deg, rgb(8 18 36 / 80%), rgb(8 18 36 / 50%) 3.75rem, transparent 7.5rem),
-      linear-gradient(90deg, rgb(8 18 36 / 40%), transparent 75%);
+      linear-gradient(90deg, rgb(8 18 36 / 66%), rgb(8 18 36 / 48%) 45%, rgb(8 18 36 / 12%) 72%, transparent);
   }
   .dm-landing-hero { padding-block: clamp(2.25rem, min(5vw, 7vh), 4.25rem); }
   .dm-landing-hero h1 {

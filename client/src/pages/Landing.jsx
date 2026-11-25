@@ -18,14 +18,17 @@ export default function Landing() {
       <a className="skip-link" href="#landing-heading">Ir al contenido</a>
       <main>
         <div className="dm-landing-cover">
-          <img
-            className="dm-landing-cover-image"
-            src="/images/dental-matching-hero.png"
-            width="1536"
-            height="1024"
-            alt=""
-            fetchPriority="high"
-          />
+          <picture>
+            <source media="(min-width: 721px)" srcSet="/images/dental-matching-hero-wide.webp" type="image/webp" />
+            <img
+              className="dm-landing-cover-image"
+              src="/images/dental-matching-hero.png"
+              width="1536"
+              height="1024"
+              alt=""
+              fetchPriority="high"
+            />
+          </picture>
           <header className="dm-landing-wrap dm-landing-nav">
             <Link to="/landing" className="dm-landing-brand">
               <span className="dm-landing-mark"><Icon name="tooth" size={17} /></span>
